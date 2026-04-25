@@ -4,8 +4,8 @@ namespace RhMcp;
 
 public interface IMcpTool
 {
-    string Name { get; }
-    string Description { get; }
-    object InputSchema { get; }
-    object Execute(JsonObject? args);
+    public string Name { get; }
+    public string Description { get; }
+    public object InputSchema { get; }
+    public object Execute(JsonObject? args);
 }

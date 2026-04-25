@@ -11,7 +11,7 @@ public class RhinoMcpCommand : Command
 
     protected override Result RunCommand(RhinoDoc doc, RunMode mode)
     {
-        RhinoApp.WriteLine($"[rh-mcp] MCP server running on http://localhost:{RhMcpHost.Port}/");
+        RhinoApp.WriteLine($"[Rhino MCP] MCP server running on http://localhost:{RhMcpHost.Port}/");
 
         var go = new GetOption();
         go.SetCommandPrompt("RhinoMCP");
@@ -34,10 +34,10 @@ public class RhinoMcpCommand : Command
             var port = gi.Number();
             if (!RhMcpHost.RestartOnPort(port))
             {
-                RhinoApp.WriteLine($"[rh-mcp] Failed to bind port {port}.");
+                RhinoApp.WriteLine($"[Rhino MCP] Failed to bind port {port}.");
                 return Result.Failure;
             }
-            RhinoApp.WriteLine($"[rh-mcp] Restarted on http://localhost:{port}/");
+            RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
         }
 
         return Result.Success;

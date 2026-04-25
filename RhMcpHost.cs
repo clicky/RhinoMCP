@@ -23,11 +23,11 @@ public static class RhMcpHost
         Start();
     }
 
-    public static void Start()
+    public static bool Start()
     {
-        if (_server != null) return;
+        if (_server != null) return false;
         _server = new McpServer(Port);
-        _server.Start();
+        return _server.Start();
     }
 
     public static void Stop()

@@ -16,7 +16,7 @@ namespace RhMcp;
 internal sealed class McpServer : IDisposable
 {
     private readonly int _port;
-    private HttpListener? _listener;
+    private HttpListener? Listener { get; set; }
     private CancellationTokenSource? _cts;
 
     // Discover all IMcpTool implementations in this assembly at startup.
@@ -30,20 +30,28 @@ internal sealed class McpServer : IDisposable
 
     public McpServer(int port = 4862) => _port = port;
 
-    public void Start()
+    public bool Start()
     {
-        _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://localhost:{_port}/");
-        _listener.Start();
-        _cts = new CancellationTokenSource();
-        _ = ListenAsync(_cts.Token);
-        RhinoApp.WriteLine($"[rh-mcp] Listening on http://localhost:{_port}/ ({Tools.Count} tools)");
+        try
+        {
+            Listener = new HttpListener();
+            Listener.Prefixes.Add($"http://localhost:{_port}/");
+            Listener.Start();
+            _cts = new CancellationTokenSource();
+            _ = ListenAsync(_cts.Token);
+            RhinoApp.WriteLine($"[Rhino MCP] Listening on http://localhost:{_port}/ ({Tools.Count} tools)");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void Stop()
     {
         _cts?.Cancel();
-        try { _listener?.Stop(); } catch { }
+        try { Listener?.Stop(); } catch { }
     }
 
     private async Task ListenAsync(CancellationToken ct)
@@ -52,13 +60,13 @@ internal sealed class McpServer : IDisposable
         {
             try
             {
-                var ctx = await _listener!.GetContextAsync().WaitAsync(ct);
+                var ctx = await Listener!.GetContextAsync().WaitAsync(ct);
                 _ = HandleAsync(ctx);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
-                RhinoApp.WriteLine($"[rh-mcp] Error: {ex.Message}");
+                RhinoApp.WriteLine($"[Rhino MCP] Error: {ex.Message}");
             }
         }
     }

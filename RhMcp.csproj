@@ -24,4 +24,9 @@
     <PackageReference Include="System.Text.Json" Version="10.0.7" />
   </ItemGroup>
 
+  <Target Name="BuildYakPackage" AfterTargets="DispatchToInnerBuilds">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)" />
+  </Target>
+
 </Project>
