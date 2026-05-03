@@ -8,32 +8,25 @@ public static class RhMcpHost
     public const int DefaultPort = 4862;
     private const string PortKey = "port";
 
-    private static PersistentSettings? _settings;
-    private static McpServer? _server;
+    private static McpServer Server { get; } = new();
+
+    public static bool HasStarted => Server?.HasStarted ?? false;
 
     public static int Port
     {
-        get => _settings?.GetInteger(PortKey, DefaultPort) ?? DefaultPort;
-        private set => _settings?.SetInteger(PortKey, value);
-    }
-
-    public static void Init(PersistentSettings settings)
-    {
-        _settings = settings;
-        Start();
+        get => RhMcpPlugin.Instance.Settings.GetInteger(PortKey, DefaultPort);
+        private set => RhMcpPlugin.Instance.Settings.SetInteger(PortKey, value);
     }
 
     public static bool Start()
     {
-        if (_server != null) return false;
-        _server = new McpServer(Port);
-        return _server.Start();
+        if (Server.HasStarted) return true;
+        return Server.Start();
     }
 
     public static void Stop()
     {
-        _server?.Stop();
-        _server = null;
+        Server.Stop();
     }
 
     public static bool RestartOnPort(int port)

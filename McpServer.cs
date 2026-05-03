@@ -15,8 +15,8 @@ namespace RhMcp;
 
 internal sealed class McpServer : IDisposable
 {
-    private readonly int _port;
     private HttpListener? Listener { get; set; }
+    public bool HasStarted => Listener?.IsListening ?? false;
     private CancellationTokenSource? _cts;
 
     // Discover all IMcpTool implementations in this assembly at startup.
@@ -28,18 +28,16 @@ internal sealed class McpServer : IDisposable
             .Select(t => (IMcpTool)Activator.CreateInstance(t)!)
             .ToDictionary(t => t.Name);
 
-    public McpServer(int port = 4862) => _port = port;
-
     public bool Start()
     {
         try
         {
             Listener = new HttpListener();
-            Listener.Prefixes.Add($"http://localhost:{_port}/");
+            Listener.Prefixes.Add($"http://localhost:{RhMcpHost.Port}/");
             Listener.Start();
             _cts = new CancellationTokenSource();
             _ = ListenAsync(_cts.Token);
-            RhinoApp.WriteLine($"[Rhino MCP] Listening on http://localhost:{_port}/ ({Tools.Count} tools)");
+            RhinoApp.WriteLine($"[Rhino MCP] Listening on http://localhost:{RhMcpHost.Port}/ ({Tools.Count} tools)");
             return true;
         }
         catch
