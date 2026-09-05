@@ -174,11 +174,11 @@
       "group": "build"
     },
     {
-      "label": "install yak (WIP)",
+      "label": "install yak (BETA)",
       "type": "shell",
       "dependsOn": "pack yak (R9)",
       "windows": {
-        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 WIP/System/Yak.exe' install $_.Name }",
+        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 BETA/System/Yak.exe' install $_.Name }",
         "options": {
           "cwd": "${workspaceFolder}/../../../bin/Release/Plug-ins/RhinoAI"
         }
@@ -202,8 +202,8 @@
       "group": "build"
     },
     {
-      "label": "install yak (Rhino 8 + WIP)",
-      "dependsOn": ["install yak (Rhino 8)", "install yak (WIP)"],
+      "label": "install yak (Rhino 8 + BETA)",
+      "dependsOn": ["install yak (Rhino 8)", "install yak (BETA)"],
       "dependsOrder": "sequence",
       "problemMatcher": [],
       "group": "build"
@@ -230,11 +230,11 @@
       "group": "build"
     },
     {
-      "label": "uninstall yak (WIP)",
+      "label": "uninstall yak (BETA)",
       "type": "shell",
       "args": ["uninstall", "Rhino-MCP-Platform"],
       "windows": {
-        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
+        "command": "C:/Program Files/Rhino 9 BETA/System/Yak.exe"
       },
       "osx": {
         "command": "/Applications/RhinoBETA.app/Contents/Resources/bin/yak"
@@ -251,8 +251,8 @@
       "group": "build"
     },
     {
-      "label": "uninstall yak (Rhino 8 + WIP)",
-      "dependsOn": ["uninstall yak (Rhino 8)", "uninstall yak (WIP)"],
+      "label": "uninstall yak (Rhino 8 + BETA)",
+      "dependsOn": ["uninstall yak (Rhino 8)", "uninstall yak (BETA)"],
       "problemMatcher": [],
       "group": "build"
     },
@@ -260,13 +260,13 @@
       "label": "register router with claude",
       "type": "shell",
       "osx": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router' -- --default-version WIP"
+        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router' -- --default-version BETA"
       },
       "linux": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router' -- --default-version WIP"
+        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router' -- --default-version BETA"
       },
       "windows": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router.exe\" -- --default-version WIP"
+        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router.exe\" -- --default-version BETA"
       },
       "problemMatcher": [],
       "presentation": {
