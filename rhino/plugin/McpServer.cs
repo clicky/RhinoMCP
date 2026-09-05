@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
@@ -29,7 +30,12 @@ internal sealed class McpServer : IDisposable
         Port = port;
         try
         {
-            WebApplicationBuilder builder = WebApplication.CreateSlimBuilder();
+            WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
+            {
+                // Prevent unnecesssary file watchers
+                Args = ["--hostBuilder:reloadConfigOnChange=false"],
+                ContentRootPath = Path.GetDirectoryName(typeof(McpServer).Assembly.Location),
+            });
             builder.Logging.ClearProviders();
             builder.Logging.AddProvider(new RhinoLoggerProvider());
             builder.Logging.SetMinimumLevel(LogLevel.Warning);
