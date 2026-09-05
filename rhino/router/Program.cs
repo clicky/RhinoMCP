@@ -14,7 +14,16 @@ string informationalVersion =
     ?? throw new InvalidOperationException("router assembly missing InformationalVersion; check build config");
 string routerVersion = informationalVersion.Split('+')[0];
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+// C. Sykes 5th Sept 2026 - RH-97810
+// Ensure app has a reasonable root dir, to prevent unnecessary file watcher checks
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = args,
+    // Give a reasonable root default
+    ContentRootPath = AppContext.BaseDirectory,
+    // Prevent File Watchers
+    DisableDefaults = true,
+});
 
 // Stdio MCP servers must not log to stdout — that's the JSON-RPC channel.
 // Route all logging to stderr.
