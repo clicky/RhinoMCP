@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using RhinoAI.Server;
+using RhinoAI.Tools;
 
 namespace RhinoAI.Server.Tests;
 
@@ -30,6 +31,7 @@ public class ParameterBinderTests
         public void Service(IGreeter greeter) { }
         public void Cancel(System.Threading.CancellationToken ct) { }
         public void UriT(string slug) { }
+        public void NoArgs() { }
     }
 
     private record struct Wire(string SrcKey, string Src, string Dst);
@@ -47,6 +49,12 @@ public class ParameterBinderTests
             .GetParameters().Single(p => p.Name == param);
         return new ParameterDescriptor(pi, kind);
     }
+
+    private static ParameterDescriptor[] Descriptors(string method)
+        => typeof(SampleMethods).GetMethod(method)!
+            .GetParameters()
+            .Select(pi => new ParameterDescriptor(pi, ParameterBindingKind.Argument))
+            .ToArray();
 
     private static Dictionary<string, JsonElement> Args(string json)
     {
@@ -87,11 +95,13 @@ public class ParameterBinderTests
     [Test]
     public void Argument_missing_with_no_default_and_non_nullable_value_type_throws()
     {
-        Assert.Throws<ArgumentException>(() => ParameterBinder.Resolve(
+        ArgumentBindingException ex = Assert.Throws<ArgumentBindingException>(() => ParameterBinder.Resolve(
             Desc("count", ParameterBindingKind.Argument),
             Args("""{}"""),
             EmptyServices(),
-            default));
+            default))!;
+        Assert.That(ex.WireName, Is.EqualTo("count"));
+        Assert.That(ex.Problem, Does.Contain("was not supplied"));
     }
 
     [Test]
@@ -108,21 +118,23 @@ public class ParameterBinderTests
     [Test]
     public void Argument_null_for_non_nullable_value_type_throws()
     {
-        Assert.Throws<ArgumentException>(() => ParameterBinder.Resolve(
+        ArgumentBindingException ex = Assert.Throws<ArgumentBindingException>(() => ParameterBinder.Resolve(
             Desc("count", ParameterBindingKind.Argument),
             Args("""{ "count": null }"""),
             EmptyServices(),
-            default));
+            default))!;
+        Assert.That(ex.WireName, Is.EqualTo("count"));
     }
 
     [Test]
     public void Argument_null_for_non_nullable_reference_type_throws()
     {
-        Assert.Throws<ArgumentException>(() => ParameterBinder.Resolve(
+        ArgumentBindingException ex = Assert.Throws<ArgumentBindingException>(() => ParameterBinder.Resolve(
             Desc("name", ParameterBindingKind.Argument),
             Args("""{ "name": null }"""),
             EmptyServices(),
-            default));
+            default))!;
+        Assert.That(ex.WireName, Is.EqualTo("name"));
     }
 
     [Test]
@@ -193,13 +205,16 @@ public class ParameterBinderTests
     }
 
     [Test]
-    public void Number_for_bool_throws()
+    public void Number_for_bool_reports_the_expected_type_and_the_value_sent()
     {
-        Assert.Throws<JsonException>(() => ParameterBinder.Resolve(
+        ArgumentBindingException ex = Assert.Throws<ArgumentBindingException>(() => ParameterBinder.Resolve(
             Desc("flag", ParameterBindingKind.Argument),
             Args("""{ "flag": 1 }"""),
             EmptyServices(),
-            default));
+            default))!;
+        Assert.That(ex.WireName, Is.EqualTo("flag"));
+        Assert.That(ex.Problem, Is.EqualTo("argument 'flag' expects boolean but got 1"));
+        Assert.That(ex.InnerException, Is.TypeOf<JsonException>());
     }
 
     [Test]
@@ -214,13 +229,95 @@ public class ParameterBinderTests
     }
 
     [Test]
-    public void Fractional_number_for_int_throws()
+    public void Fractional_number_for_int_rounds_and_notes_the_change()
     {
-        Assert.Throws<JsonException>(() => ParameterBinder.Resolve(
+        using BindNotes.Call call = BindNotes.Begin();
+
+        object? value = ParameterBinder.Resolve(
             Desc("count", ParameterBindingKind.Argument),
-            Args("""{ "count": 3.5 }"""),
+            Args("""{ "count": 3.7 }"""),
             EmptyServices(),
-            default));
+            default);
+
+        Assert.That(value, Is.EqualTo(4));
+        Assert.That(call.Notes, Is.EqualTo(new[] { "count 3.7 was rounded to 4" }));
+    }
+
+    [Test]
+    public void Fractional_midpoint_rounds_away_from_zero()
+    {
+        using BindNotes.Call call = BindNotes.Begin();
+
+        object? positive = ParameterBinder.Resolve(
+            Desc("count", ParameterBindingKind.Argument), Args("""{ "count": 2.5 }"""), EmptyServices(), default);
+        object? negative = ParameterBinder.Resolve(
+            Desc("retries", ParameterBindingKind.Argument), Args("""{ "retries": -2.5 }"""), EmptyServices(), default);
+
+        Assert.That(positive, Is.EqualTo(3));
+        Assert.That(negative, Is.EqualTo(-3));
+        Assert.That(call.Notes, Is.EqualTo(new[] { "count 2.5 was rounded to 3", "retries -2.5 was rounded to -3" }));
+    }
+
+    [Test]
+    public void Integral_decimal_binds_without_a_note()
+    {
+        using BindNotes.Call call = BindNotes.Begin();
+
+        object? value = ParameterBinder.Resolve(
+            Desc("count", ParameterBindingKind.Argument),
+            Args("""{ "count": 3.0 }"""),
+            EmptyServices(),
+            default);
+
+        Assert.That(value, Is.EqualTo(3));
+        Assert.That(call.Notes, Is.Empty);
+    }
+
+    [Test]
+    public void Rounding_outside_a_note_scope_still_binds()
+    {
+        object? value = ParameterBinder.Resolve(
+            Desc("count", ParameterBindingKind.Argument),
+            Args("""{ "count": 3.7 }"""),
+            EmptyServices(),
+            default);
+
+        Assert.That(value, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void Unparseable_int_reports_the_expected_type_and_the_value_sent()
+    {
+        ArgumentBindingException ex = Assert.Throws<ArgumentBindingException>(() => ParameterBinder.Resolve(
+            Desc("count", ParameterBindingKind.Argument),
+            Args("""{ "count": "abc" }"""),
+            EmptyServices(),
+            default))!;
+        Assert.That(ex.Problem, Is.EqualTo("argument 'count' expects integer but got \"abc\""));
+    }
+
+    [Test]
+    public void Binding_failure_names_the_tool_and_its_arguments()
+    {
+        ArgumentBindingException failure = new("count", "required argument 'count' was not supplied");
+
+        IToolResult result = BindingFailure.Describe("demo_tool", Descriptors(nameof(SampleMethods.M)), failure);
+
+        Assert.That(result.Code, Is.EqualTo(ToolError.BadArgument));
+        Assert.That(result.Message, Is.EqualTo("demo_tool: required argument 'count' was not supplied"));
+        Assert.That(result.Guidance, Is.EqualTo(
+            "'demo_tool' requires name (string), count (integer), mode (integer), id (string). "
+            + "Optional: maybeCount (integer), nullableName (string), label (string), retries (integer), flag (boolean)."));
+    }
+
+    [Test]
+    public void Binding_failure_on_a_tool_without_arguments_says_so()
+    {
+        ArgumentBindingException failure = new("count", "required argument 'count' was not supplied");
+
+        IToolResult result = BindingFailure.Describe("demo_tool", Descriptors(nameof(SampleMethods.NoArgs)), failure);
+
+        Assert.That(result.Guidance, Is.EqualTo("'demo_tool' takes no arguments."));
     }
 
     [Test]

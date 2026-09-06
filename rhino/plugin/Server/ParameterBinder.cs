@@ -50,15 +50,33 @@ internal static class ParameterBinder
         {
             if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
             if (IsNullable(p.Parameter)) return null;
-            throw new ArgumentException($"Required argument '{p.WireName}' was not supplied.");
+            throw new ArgumentBindingException(p.WireName, $"required argument '{p.WireName}' was not supplied");
         }
         if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
         {
             if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
             if (IsNullable(p.Parameter)) return null;
-            throw new ArgumentException($"Argument '{p.WireName}' was null but the parameter is not nullable.");
+            throw new ArgumentBindingException(p.WireName, $"argument '{p.WireName}' was null but is required");
         }
-        return JsonSerializer.Deserialize(element.GetRawText(), p.ParameterType, McpSerializer.Options);
+
+        using BindNotes.Parameter attribution = BindNotes.For(p.WireName);
+        try
+        {
+            return JsonSerializer.Deserialize(element.GetRawText(), p.ParameterType, McpSerializer.Options);
+        }
+        catch (Exception ex) when (ex is JsonException or OverflowException or FormatException or NotSupportedException)
+        {
+            throw new ArgumentBindingException(
+                p.WireName,
+                $"argument '{p.WireName}' expects {SchemaBuilder.TypeName(p.ParameterType)} but got {Compact(element)}",
+                ex);
+        }
+    }
+
+    private static string Compact(JsonElement element)
+    {
+        string raw = element.GetRawText();
+        return raw.Length <= 80 ? raw : raw[..80] + "...";
     }
 
     private static object? ConvertString(string raw, Type target)

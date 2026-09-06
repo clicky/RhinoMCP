@@ -56,6 +56,17 @@ internal static class SchemaBuilder
     public static string WireName(string name) =>
         McpSerializer.Options.PropertyNamingPolicy?.ConvertName(name) ?? name;
 
+    // Names a type with the same word the advertised schema uses, so a rejection cannot describe an argument differently from the schema the agent was given.
+    public static string TypeName(Type t)
+    {
+        Type u = Nullable.GetUnderlyingType(t) ?? t;
+
+        if (PrimitiveType(u) is string primitive)
+            return primitive;
+
+        return ElementType(u) is not null ? "array" : "object";
+    }
+
     // Shared by ParameterDescriptor so a tool parameter and a nested constructor parameter are
     // judged required by exactly the same rules.
     public static bool IsRequired(ParameterInfo parameter)

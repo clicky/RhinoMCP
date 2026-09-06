@@ -165,8 +165,22 @@ internal sealed class ToolHandler
         IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
     {
         object?[] args = new object?[_parameters.Length];
-        for (int i = 0; i < _parameters.Length; i++)
-            args[i] = ParameterBinder.Resolve(_parameters[i], arguments, scope, ct);
+        IReadOnlyList<string> coercions;
+
+        using (BindNotes.Call call = BindNotes.Begin())
+        {
+            try
+            {
+                for (int i = 0; i < _parameters.Length; i++)
+                    args[i] = ParameterBinder.Resolve(_parameters[i], arguments, scope, ct);
+            }
+            catch (ArgumentBindingException ex)
+            {
+                return ToolResultFormatter.Format(BindingFailure.Describe(Name, _parameters, ex));
+            }
+
+            coercions = call.Notes;
+        }
 
         object? rawResult;
         try
@@ -189,7 +203,17 @@ internal sealed class ToolHandler
         if (result is not IToolResult toolResult)
             throw new InvalidOperationException($"Tool '{Name}' returned no result.");
 
-        return ToolResultFormatter.Format(toolResult, IgnoredArguments(arguments));
+        return ToolResultFormatter.Format(toolResult, Advisories(coercions, arguments));
+    }
+
+    private string? Advisories(IReadOnlyList<string> coercions, IDictionary<string, JsonElement>? arguments)
+    {
+        string? ignored = IgnoredArguments(arguments);
+        if (coercions.Count == 0)
+            return ignored;
+
+        string coerced = string.Join("; ", coercions);
+        return ignored is null ? coerced : $"{coerced}; {ignored}";
     }
 
     // Unclaimed arguments are honoured as far as they can be (dropped) rather than refused,

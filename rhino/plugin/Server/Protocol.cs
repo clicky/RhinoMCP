@@ -312,8 +312,14 @@ internal sealed class LenientIntConverter : JsonConverter<int>
         throw new JsonException($"Cannot convert \"{value}\" to int.");
     }
 
+    // Every int on the tool surface is a count, size or precision, so refusing the whole call over a stray 3.7 loses more than rounding it and saying so.
     private static int FromDecimal(decimal value)
-        => decimal.Truncate(value) == value
-            ? (int)value
-            : throw new JsonException($"Cannot convert non-integer {value} to int.");
+    {
+        if (decimal.Truncate(value) == value)
+            return (int)value;
+
+        int rounded = (int)decimal.Round(value, MidpointRounding.AwayFromZero);
+        BindNotes.Add($"{value.ToString(CultureInfo.InvariantCulture)} was rounded to {rounded}");
+        return rounded;
+    }
 }
