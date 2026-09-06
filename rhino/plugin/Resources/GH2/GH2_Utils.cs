@@ -17,15 +17,19 @@ public static class GH2_Utils
   {
     doc = default!;
 
-    Editor editor = Editor.Instance;
+    Editor? editor = Editor.Instance;
     if (editor is null)
     {
         string commandName = Rhino.Commands.Command.IsCommand("_G2") ? "_G2" : "_GH2";
         RhinoApp.RunScript(rhDoc.RuntimeSerialNumber, commandName, true);
-      if (editor is null) return false;
+
+        // Re-read: the launch above is what populates it, so the local captured before it is always null.
+        editor = Editor.Instance;
+        if (editor is null)
+            return false;
     }
 
-    doc = editor.Canvas.Document;
+    doc = editor.Canvas?.Document!;
 
     return doc is not null;
   }

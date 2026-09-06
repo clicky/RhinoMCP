@@ -15,8 +15,6 @@ public abstract record GH1_ProxyResolution
 
 public readonly record struct GH1_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
 
-public readonly record struct GH1_UnresolvedResult(string Error, string Message, IReadOnlyList<GH1_Candidate> Candidates);
-
 public static class GH1_ProxyResolver
 {
     // GH_Exposure.hidden is -1 (all bits set), so a HasFlag/bitmask test matches everything. Compare by value.

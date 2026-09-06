@@ -7,7 +7,7 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 public static class GH2_SolveTool
 {
-    public sealed record SolveResult(bool Solved, string Phase, int Errors, int Warnings, GH2Diagnostic[] Diagnostics);
+    public sealed record SolveResult(bool Solved, int Objects, string Phase, int Errors, int Warnings, GH2Diagnostic[] Diagnostics);
 
     [McpServerTool("g2_solve_canvas", "Solve GH2 Canvas", false, false)]
     [Description("Solves the active GH2 canvas and reads back per-component diagnostics. Returns {Solved, Phase, Errors, Warnings, Diagnostics[]}. Each diagnostic is {Id, Name, Nickname, Level (Remark|Warning|Error|Fault), Message}. Solved is true only when the solution completed with no Error or Fault. Use this to see exactly which components failed and why, then fix them.")]
@@ -30,7 +30,7 @@ public static class GH2_SolveTool
         (int errors, int warnings) = GH2_Diagnostics.Count(diagnostics);
 
         bool solved = solution.Phase == SolutionPhase.Completed && errors == 0;
-        SolveResult result = new(solved, solution.Phase.ToString(), errors, warnings, diagnostics.ToArray());
+        SolveResult result = new(solved, ghDoc.Objects.Count, solution.Phase.ToString(), errors, warnings, diagnostics.ToArray());
 
         return solved
             ? Success(result)

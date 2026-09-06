@@ -59,6 +59,9 @@ public static class GH2_ConnectManyTool
         IDocumentObject dstObj = doc.Objects.Find(dstGuid);
         if (dstObj is null) return new WireResult(idx, false, null, null, $"Destination '{dstGuid}' not found");
 
+        if (ReferenceEquals(srcObj, dstObj))
+            return new WireResult(idx, false, null, null, $"Object '{srcGuid}' cannot be wired to itself");
+
         if (!GH2_GraphOps.TryResolveOutput(srcObj, w.Src, out IParameter? srcParam, out string srcErr))
             return new WireResult(idx, false, null, null, srcErr);
         if (!GH2_GraphOps.TryResolveInput(dstObj, w.Dst, out IParameter? dstParam, out string dstErr))

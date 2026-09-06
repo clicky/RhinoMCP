@@ -26,7 +26,7 @@ public static class GetContextTool
 
     public sealed record DocSummary(int ObjectCount, int LayerCount);
 
-    public sealed record GrasshopperSummary(bool CanvasOpen, int ComponentCount, int WireCount);
+    public sealed record GrasshopperSummary(string Version, bool CanvasOpen, int ComponentCount, int WireCount);
 
     public sealed record ContextSnapshot(
         SelectedObject[] Selection,
@@ -45,7 +45,7 @@ public static class GetContextTool
         SelectedObject[] selection = Try(() => SelectionOf(doc), [], "selection", warnings);
         ViewportSummary? viewport = Try(() => SummarizeViewport(doc), null, "viewport", warnings);
         DocSummary document = Try(() => SummarizeDocument(doc), new DocSummary(0, 0), "document", warnings);
-        GrasshopperSummary grasshopper = Try(SummarizeGrasshopper, new GrasshopperSummary(false, 0, 0), "grasshopper", warnings);
+        GrasshopperSummary grasshopper = Try(SummarizeGrasshopper, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper", warnings);
 
         ContextSnapshot snapshot = new(
             selection,
@@ -131,7 +131,7 @@ public static class GetContextTool
     {
         GH_Document? ghDoc = Instances.ActiveCanvas?.Document;
         if (ghDoc is null)
-            return new GrasshopperSummary(false, 0, 0);
+            return new GrasshopperSummary("GH1", false, 0, 0);
 
         int components = 0;
         int wires = 0;
@@ -149,7 +149,7 @@ public static class GetContextTool
             }
         }
 
-        return new GrasshopperSummary(true, components, wires);
+        return new GrasshopperSummary("GH1", true, components, wires);
     }
 
     public static double[] XYZ(Point3d p) => [p.X, p.Y, p.Z];

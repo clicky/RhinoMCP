@@ -16,6 +16,9 @@ public static class ListObjectsTool
         [Description("Include locked objects (default true)")] bool includeLocked = true,
         [Description("Maximum number of objects to return (default 1000)")] int limit = 1000)
     {
+        if (limit < 1)
+            return Failure(ToolError.BadArgument, $"limit must be 1 or more, got {limit}");
+
         ObjectEnumeratorSettings settings = new()
         {
             ActiveObjects = true,

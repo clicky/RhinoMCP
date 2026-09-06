@@ -36,8 +36,16 @@ public static class GH1_PlaceComponentTool
         return GH1_ProxyResolver.Resolve(selector, includeDeprecated) switch
         {
             GH1_ProxyResolution.Found found => PlaceResolved(doc, found.Proxy, selector, x, y, solve),
-            GH1_ProxyResolution.Ambiguous ambiguous => Success(new GH1_UnresolvedResult("ambiguous", GH1_ProxyResolver.AmbiguousMessage, GH1_ProxyResolver.ToCandidates(ambiguous.Candidates))),
-            GH1_ProxyResolution.OnlyDeprecated onlyDeprecated => Success(new GH1_UnresolvedResult("only_deprecated", GH1_ProxyResolver.OnlyDeprecatedMessage, GH1_ProxyResolver.ToCandidates(onlyDeprecated.Candidates))),
+            GH1_ProxyResolution.Ambiguous ambiguous => Failure(
+                ToolError.Ambiguous,
+                ContentBlock.CreateJson(GH1_ProxyResolver.ToCandidates(ambiguous.Candidates)),
+                $"'{selector}' matches {ambiguous.Candidates.Count} components",
+                GH1_ProxyResolver.AmbiguousMessage),
+            GH1_ProxyResolution.OnlyDeprecated onlyDeprecated => Failure(
+                ToolError.GH_Component_NotFound,
+                ContentBlock.CreateJson(GH1_ProxyResolver.ToCandidates(onlyDeprecated.Candidates)),
+                $"Only obsolete or hidden components match '{selector}'",
+                GH1_ProxyResolver.OnlyDeprecatedMessage),
             GH1_ProxyResolution.NotFound => Failure(ToolError.GH_Component_NotFound, $"No component named '{selector}' found", "Find the right name with g1_search_components"),
             _ => throw new InvalidOperationException("Unhandled resolution case"),
         };

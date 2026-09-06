@@ -32,8 +32,16 @@ public static class GH2_DescribeComponentTool
         GH2_ProxyResolver.Resolve(name, includeDeprecated) switch
         {
             GH2_ProxyResolution.Found found => DescribeProxy(found.Proxy),
-            GH2_ProxyResolution.Ambiguous ambiguous => Success(new GH2_UnresolvedResult("ambiguous", GH2_ProxyResolver.AmbiguousMessage, GH2_ProxyResolver.ToCandidates(ambiguous.Candidates))),
-            GH2_ProxyResolution.OnlyDeprecated onlyDeprecated => Success(new GH2_UnresolvedResult("only_deprecated", GH2_ProxyResolver.OnlyDeprecatedMessage, GH2_ProxyResolver.ToCandidates(onlyDeprecated.Candidates))),
+            GH2_ProxyResolution.Ambiguous ambiguous => Failure(
+                ToolError.Ambiguous,
+                ContentBlock.CreateJson(GH2_ProxyResolver.ToCandidates(ambiguous.Candidates)),
+                $"'{name}' matches {ambiguous.Candidates.Count} components",
+                GH2_ProxyResolver.AmbiguousMessage),
+            GH2_ProxyResolution.OnlyDeprecated onlyDeprecated => Failure(
+                ToolError.GH_Component_NotFound,
+                ContentBlock.CreateJson(GH2_ProxyResolver.ToCandidates(onlyDeprecated.Candidates)),
+                $"Only obsolete or hidden components match '{name}'",
+                GH2_ProxyResolver.OnlyDeprecatedMessage),
             GH2_ProxyResolution.NotFound => Failure(ToolError.GH_Component_NotFound, $"No component named '{name}' found", "Find the right name with g2_search_components"),
             _ => throw new InvalidOperationException("Unhandled resolution case"),
         };

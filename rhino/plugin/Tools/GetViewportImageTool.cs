@@ -67,6 +67,9 @@ public static class GetViewportImageTool
             if (target is not null)
                 vp.SetCameraTarget((Point3d)target, false);
 
+            if (boxMin is null != boxMax is null)
+                return Failure(ToolError.BadArgument, "boxMin and boxMax must be supplied together", "Pass both corners, or neither");
+
             if (boxMin is not null && boxMax is not null)
             {
                 BoundingBox bb = new((Point3d)boxMin, (Point3d)boxMax);

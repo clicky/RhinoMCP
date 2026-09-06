@@ -12,10 +12,14 @@ public static class RunCommandTool
         [Description("Rhino command string to execute")] string command)
     {
         RhinoApp.CommandWindowCaptureEnabled = true;
-        RhinoApp.RunScript(doc.RuntimeSerialNumber, command, false);
+        bool ran = RhinoApp.RunScript(doc.RuntimeSerialNumber, command, false);
         string[] lines = RhinoApp.CapturedCommandWindowStrings(true);
         RhinoApp.CommandWindowCaptureEnabled = false;
 
-        return Success(ContentBlock.CreateText(lines is { Length: > 0 } ? string.Concat(lines) : "Done."));
+        ContentBlock output = ContentBlock.CreateText(lines is { Length: > 0 } ? string.Concat(lines) : "Done.");
+
+        return ran
+            ? Success(output)
+            : Failure(ToolError.Failed, output, $"Rhino did not run '{command}' to completion");
     }
 }

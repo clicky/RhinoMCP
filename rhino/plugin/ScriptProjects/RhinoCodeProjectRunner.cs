@@ -172,15 +172,20 @@ internal class RhinoCodeProjectRunner : IProjectRunner
             if (result.Error is not null)
                 return result;
 
+            bool removed = false;
             foreach (ICode code in project.GetCodes())
             {
                 if (!string.Equals(code.Title, commandName, StringComparison.OrdinalIgnoreCase))
                     continue;
                 project.Remove(code.Id);
                 project.Store();
+                removed = true;
 
                 break;
             }
+
+            if (!removed)
+                return Failure(ToolError.RH_Command_NotFound, $"No command named '{commandName}' is in the project");
 
             Reload();
         }

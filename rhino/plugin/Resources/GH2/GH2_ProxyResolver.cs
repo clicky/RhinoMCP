@@ -15,8 +15,6 @@ public abstract record GH2_ProxyResolution
 
 public readonly record struct GH2_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
 
-public readonly record struct GH2_UnresolvedResult(string Error, string Message, IReadOnlyList<GH2_Candidate> Candidates);
-
 public static class GH2_ProxyResolver
 {
     public static bool IsDeprecated(ObjectProxy proxy) =>

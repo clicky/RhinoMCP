@@ -8,6 +8,8 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 public static class GH1_SolveTool
 {
+    public record struct SolveResult(bool Solved, int Objects, int Reported, GH1_Utils.ComponentStatus[] Statuses);
+
     [McpServerTool("g1_solve_graph", "Solve GH1 Graph", false, false)]
     [Description("Solves the active GH canvas. zoom_views controls whether Rhino viewports zoom to the new preview: true=always, false=never, null=auto (zoom only when nothing was previewed before the solve).")]
     public static IToolResult Solve(
@@ -40,12 +42,14 @@ public static class GH1_SolveTool
         }
 
         List<GH1_Utils.ComponentStatus> statuses = GH1_Utils.GetCanvasStatus(ghDoc);
+        SolveResult result = new(statuses.Count == 0, activeCount, statuses.Count, statuses.ToArray());
+
         if (statuses.Count == 0)
-            return Success();
+            return Success(result);
 
         return Failure(
             ToolError.GH_Solution_Failed,
-            ContentBlock.CreateJson(statuses),
+            ContentBlock.CreateJson(result),
             "The solution reported component errors",
             "Read the statuses to see which components failed and why");
     }

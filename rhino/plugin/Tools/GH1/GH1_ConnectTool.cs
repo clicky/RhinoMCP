@@ -37,6 +37,10 @@ public static class GH1_ConnectTool
         if (dstObj is null)
             return Failure(ToolError.GH_Object_NotFound, $"Destination object '{dstGuid}' not found");
 
+        // A wire from an object back into itself is a one-step cycle: it solves, silently, forever stale.
+        if (ReferenceEquals(srcObj, dstObj))
+            return Failure(ToolError.BadArgument, $"Object '{srcGuid}' cannot be wired to itself");
+
         if (!TryResolveOutput(srcObj, src, out IGH_Param? srcParam, out string srcErr))
             return Failure(ToolError.GH_Param_NotFound, srcErr);
 

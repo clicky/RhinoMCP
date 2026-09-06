@@ -57,14 +57,16 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
             thrown = ex.Message;
         }
 
-        string captured = Encoding.UTF8.GetString(errors.ToArray());
+        string stdout = Encoding.UTF8.GetString(output.ToArray());
+        string stderr = Encoding.UTF8.GetString(errors.ToArray());
 
-        if (captured.Length > 0 || thrown is not null)
-        {
-            return Failure(ToolError.Failed, [ContentBlock.CreateText(captured)], thrown ?? "The script wrote to stderr");
-        }
+        // Only a throw is a failure: a warning on stderr still means the script ran and its changes landed.
+        if (thrown is not null)
+            return Failure(ToolError.Failed, ContentBlock.CreateJson(new { stdout, stderr }), thrown);
 
-        return Success(ContentBlock.CreateText(Encoding.UTF8.GetString(output.ToArray())));
+        return Success(
+            new { stdout, stderr },
+            stderr.Length > 0 ? "The script wrote to stderr but ran to completion" : null);
     }
 }
 

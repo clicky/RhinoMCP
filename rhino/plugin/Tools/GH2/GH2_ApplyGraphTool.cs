@@ -204,6 +204,9 @@ public static class GH2_ApplyGraphTool
         if (!keyToObj.TryGetValue(w.DstKey, out var dstObj))
             return new WireResult(idx, false, $"dst_key '{w.DstKey}' did not match a placed object");
 
+        if (ReferenceEquals(srcObj, dstObj))
+            return new WireResult(idx, false, $"key '{w.SrcKey}' cannot be wired to itself");
+
         if (!GH2_GraphOps.TryResolveOutput(srcObj, w.Src, out IParameter? srcParam, out string srcErr))
             return new WireResult(idx, false, srcErr);
         if (!GH2_GraphOps.TryResolveInput(dstObj, w.Dst, out IParameter? dstParam, out string dstErr))
