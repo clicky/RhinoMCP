@@ -155,7 +155,7 @@ public sealed class ContentBlock
         new() { Type = "text", Text = text };
 
     public static ContentBlock CreateJson<V>(V value) =>
-        new() { Type = "text/json", Text = JsonSerializer.Serialize(value, McpSerializer.Options) };
+        new() { Type = "text", Text = JsonSerializer.Serialize(value, McpSerializer.Options) };
 
     public static ContentBlock CreateImage(byte[] data, string mimeType) =>
         new() { Type = "image", Data = Convert.ToBase64String(data), MimeType = mimeType };
