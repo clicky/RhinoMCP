@@ -25,6 +25,7 @@ internal static class OpenDocTool
             foreach (RhinoObject? obj in doc.Objects)
             {
                 if (obj is null) continue;
+                if (!obj.IsDeletable) continue;
                 removables.Add(obj);
             }
         }
