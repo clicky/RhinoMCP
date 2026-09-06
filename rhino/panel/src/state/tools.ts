@@ -49,6 +49,26 @@ export function iconFor(family: ToolFamily): IconName {
   return ICONS[family];
 }
 
+// A handful of tools earn their own mark because the family icon hides the one thing the card does
+// not otherwise say: "opened Grasshopper" is the title for both g1_ and g2_, and "ran python" and
+// "ran C#" share the terminal glyph. Everything else stays on its family icon.
+const TOOL_ICONS: Readonly<Record<string, IconName>> = {
+  run_python: 'python',
+  run_csharp: 'csharp',
+};
+
+const TOOL_ICON_PREFIXES: readonly (readonly [string, IconName])[] = [
+  ['g1_', 'gh1'],
+  ['g2_', 'gh2'],
+];
+
+export function iconForTool(name: string): IconName {
+  const exact = TOOL_ICONS[name];
+  if (exact) return exact;
+  for (const [prefix, mark] of TOOL_ICON_PREFIXES) if (name.startsWith(prefix)) return mark;
+  return iconFor(familyOf(name));
+}
+
 export function statusLabel(status: ToolStatus): string {
   switch (status) {
     case 'running':

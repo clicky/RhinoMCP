@@ -3,7 +3,7 @@ import type { Child } from '../core/dom.js';
 import type { Signal } from '../core/signal.js';
 import { highlight } from '../core/highlight.js';
 import { formatDuration, prettyJson } from '../state/format.js';
-import { familyOf, iconFor } from '../state/tools.js';
+import { iconForTool } from '../state/tools.js';
 import type { ToolCall } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
@@ -11,7 +11,7 @@ import { preview } from './previews.js';
 
 export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
   const id = call.peek().id;
-  const family = familyOf(call.peek().name);
+  const mark = iconForTool(call.peek().name);
 
   // A failure is the one thing worth opening unasked, and only the first time.
   let autoOpened = false;
@@ -56,7 +56,16 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
     el(
       'div',
       { class: 'tool-section' },
-      el('h4', { text: label }),
+      el(
+        'div',
+        { class: 'tool-section-head' },
+        el('h4', { text: label }),
+        el(
+          'button',
+          { class: 'tool-copy', type: 'button', title: `Copy ${label}`, onClick: () => ctx.copy(body) },
+          icon('copy', 12),
+        ),
+      ),
       el('pre', null, el('code', { ref: (node: HTMLElement) => node.appendChild(highlight(body, 'json')) })),
     );
 
@@ -78,7 +87,7 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
         () =>
           call().status === 'running'
             ? el('span', { class: 'spinner' })
-            : el('span', { class: 'fam' }, icon(iconFor(family), 14)),
+            : el('span', { class: 'fam' }, icon(mark, 14)),
         el('span', { class: 'title', text: () => call().title }),
         // Only worth the space when it says something the phrase does not. An unrecognised tool has
         // no phrase, so its title already is the wire name.

@@ -26,8 +26,10 @@ const ctx: PanelContext = {
   native: native !== null,
   send: (command) => bridge.send(command),
   copy: (text) => {
-    // The host owns the clipboard when the webview cannot reach it (older WKWebView, no https).
-    void navigator.clipboard?.writeText(text).catch(() => bridge.send({ type: 'clipboard.write', text }));
+    // LoadHtml gives the page an opaque origin, so navigator.clipboard is either absent (and the
+    // whole chain short-circuits, fallback included) or refuses to write. The host owns the
+    // clipboard; the mock forwards the same command to the browser's.
+    bridge.send({ type: 'clipboard.write', text });
   },
   openLink: (url) => bridge.send({ type: 'url.open', url }),
   submit: (override) => {

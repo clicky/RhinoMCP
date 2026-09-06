@@ -93,13 +93,12 @@ function block(ctx: PanelContext, turn: TurnView, view: BlockView): Child {
   }
 }
 
-function plainText(turn: TurnView): string {
-  const parts = [`> ${turn.prompt}`];
-  for (const view of turn.blocks()) {
-    if (view.kind === 'text') parts.push(view.text.peek());
-    else if (view.kind === 'tool') parts.push(`[${view.call.peek().title}]`);
-  }
-  return parts.join('\n\n');
+function replyText(turn: TurnView): string {
+  return turn
+    .blocks()
+    .filter((view) => view.kind === 'text')
+    .map((view) => view.text.peek())
+    .join('\n\n');
 }
 
 function turnFooter(ctx: PanelContext, turn: TurnView): Child {
@@ -125,7 +124,7 @@ function turnFooter(ctx: PanelContext, turn: TurnView): Child {
     el('span', { class: 'spacer' }),
     el(
       'button',
-      { type: 'button', title: 'Copy this exchange', onClick: () => ctx.copy(plainText(turn)) },
+      { type: 'button', title: 'Copy the reply', onClick: () => ctx.copy(replyText(turn)) },
       icon('copy', 13),
     ),
     when(
