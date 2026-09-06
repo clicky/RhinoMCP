@@ -19,7 +19,7 @@ public static class GH2_SearchComponentsTool
         bool IsHidden);
 
     [McpServerTool("g2_search_components", "Search GH2 Components", true, false)]
-    [Description("Search the GH2 component library by substring. Matches Name and Info (case-insensitive). Optional exact-match chapter/section filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
+    [Description("Search the GH2 component library. The query is split into words and every word must appear somewhere in Name, Info, Chapter or Section (case-insensitive), so 'XY plane' finds 'World XY'. Exact name matches rank first, then names carrying every word. Optional exact-match chapter/section filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
     public static IToolResult Search(
         RhinoDoc _,
         [Description("Substring to match against component Name and Info. Case-insensitive.")] string query,
@@ -31,7 +31,9 @@ public static class GH2_SearchComponentsTool
         if (string.IsNullOrEmpty(query))
             return Failure(ToolError.BadArgument, "query is required");
 
-        List<ProxyHit> hits = [];
+        string[] tokens = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+        List<(int Order, ProxyHit Hit)> hits = [];
         foreach (ObjectProxy p in ObjectProxies.Proxies)
         {
             Nomen n = p.Nomen;
@@ -39,15 +41,30 @@ public static class GH2_SearchComponentsTool
             if (subcategory is not null && !string.Equals(n.Section, subcategory, StringComparison.OrdinalIgnoreCase)) continue;
             if (!includeDeprecated && GH2_ProxyResolver.IsDeprecated(p)) continue;
 
-            if (!Match(n.Name, query) && !Match(n.Info, query)) continue;
+            if (!tokens.All(t => Match(n.Name, t) || Match(n.Info, t) || Match(n.Chapter, t) || Match(n.Section, t)))
+                continue;
 
             string kind = GH2_Utils.ClassifyKind(p.Type);
 
-            hits.Add(new ProxyHit(p.Id, n.Name, n.Chapter, n.Section, kind, n.Info, p.Obsolete, p.Nomen.Rank == Rank.Hidden));
-            if (hits.Count >= limit) break;
+            hits.Add((
+                Order(n.Name, query, tokens),
+                new ProxyHit(p.Id, n.Name, n.Chapter, n.Section, kind, n.Info, p.Obsolete, p.Nomen.Rank == Rank.Hidden)));
         }
 
-        return Success(hits);
+        return Success(hits
+            .OrderBy(h => h.Order)
+            .ThenBy(h => h.Hit.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(limit)
+            .Select(h => h.Hit)
+            .ToList());
+    }
+
+    // Broader matching buries the obvious answer, so an exact name wins, then a name carrying every token.
+    private static int Order(string? name, string query, string[] tokens)
+    {
+        if (string.Equals(name, query, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (tokens.All(t => Match(name, t))) return 1;
+        return 2;
     }
 
     private static bool Match(string? haystack, string needle) =>
