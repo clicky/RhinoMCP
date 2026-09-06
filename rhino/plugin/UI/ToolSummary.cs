@@ -188,7 +188,8 @@ internal static class ToolSummary
     private static bool TryGetInt(JsonElement root, string name, out int value)
     {
         value = 0;
-        return root.TryGetProperty(name, out JsonElement el)
+        return  root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty(name, out JsonElement el)
             && el.ValueKind == JsonValueKind.Number
             && el.TryGetInt32(out value);
     }
