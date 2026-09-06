@@ -47,9 +47,9 @@ public class RhinoAIPlugin : PlugIn
             using StreamReader reader = new(stream);
             string svg = reader.ReadToEnd();
 
-            Size size = Rhino.UI.Panels.IconSizeInPixels;
+            var size = Rhino.UI.Panels.IconSizeInPixels;
             int pixels = size.Width > 0 ? size.Width : 36;
-            using Bitmap bitmap = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, pixels, pixels, adjustForDarkMode: true);
+            using System.Drawing.Bitmap bitmap = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, pixels, pixels, adjustForDarkMode: true);
             return System.Drawing.Icon.FromHandle(bitmap.GetHicon());
         }
         catch
