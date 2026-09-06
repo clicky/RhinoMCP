@@ -62,8 +62,8 @@ public static class GH1_ConnectManyTool
         var dstObj = doc.FindObject(dstGuid, true);
         if (dstObj is null) return new WireResult(idx, false, null, null, $"Destination '{dstGuid}' not found");
 
-        if (ReferenceEquals(srcObj, dstObj))
-            return new WireResult(idx, false, null, null, $"Object '{srcGuid}' cannot be wired to itself");
+        if (GH1_GraphOps.WouldCycle(srcObj, dstObj))
+            return new WireResult(idx, false, null, null, $"Wiring '{srcGuid}' into '{dstGuid}' would create a cycle");
 
         if (!GH1_GraphOps.TryResolveOutput(srcObj, w.Src, out IGH_Param? srcParam, out string srcErr))
             return new WireResult(idx, false, null, null, srcErr);

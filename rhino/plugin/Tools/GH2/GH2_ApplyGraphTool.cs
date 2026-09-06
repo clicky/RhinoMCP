@@ -94,7 +94,7 @@ public static class GH2_ApplyGraphTool
         if (wires is not null)
         {
             for (int i = 0; i < wires.Length; i++)
-                wireResults[i] = WireOne(i, wires[i], keyToObj, rewiring);
+                wireResults[i] = WireOne(doc, i, wires[i], keyToObj, rewiring);
         }
 
         // A solver throw still returns the partial work rather than losing the placing and wiring already done.
@@ -169,15 +169,15 @@ public static class GH2_ApplyGraphTool
     private static string Summarize(IReadOnlyList<ObjectProxy> proxies) =>
         string.Join(", ", proxies.Select(p => $"{p.Id} ({p.Nomen.Chapter}/{p.Nomen.Section})"));
 
-    private static WireResult WireOne(int idx, WireSpec w, Dictionary<string, IDocumentObject> keyToObj, Rewiring rewiring)
+    private static WireResult WireOne(Document doc, int idx, WireSpec w, Dictionary<string, IDocumentObject> keyToObj, Rewiring rewiring)
     {
         if (!keyToObj.TryGetValue(w.SrcKey, out var srcObj))
             return new WireResult(idx, false, $"src_key '{w.SrcKey}' did not match a placed object");
         if (!keyToObj.TryGetValue(w.DstKey, out var dstObj))
             return new WireResult(idx, false, $"dst_key '{w.DstKey}' did not match a placed object");
 
-        if (ReferenceEquals(srcObj, dstObj))
-            return new WireResult(idx, false, $"key '{w.SrcKey}' cannot be wired to itself");
+        if (GH2_GraphOps.WouldCycle(doc, srcObj, dstObj))
+            return new WireResult(idx, false, $"wiring key '{w.SrcKey}' into '{w.DstKey}' would create a cycle");
 
         if (!GH2_GraphOps.TryResolveOutput(srcObj, w.Src, out IParameter? srcParam, out string srcErr))
             return new WireResult(idx, false, srcErr);

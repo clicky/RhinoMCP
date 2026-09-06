@@ -187,8 +187,8 @@ public static class GH1_ApplyGraphTool
         if (!keyToObj.TryGetValue(w.DstKey, out var dstObj))
             return new WireResult(idx, false, $"dst_key '{w.DstKey}' did not match a placed object");
 
-        if (ReferenceEquals(srcObj, dstObj))
-            return new WireResult(idx, false, $"key '{w.SrcKey}' cannot be wired to itself");
+        if (GH1_GraphOps.WouldCycle(srcObj, dstObj))
+            return new WireResult(idx, false, $"wiring key '{w.SrcKey}' into '{w.DstKey}' would create a cycle");
 
         if (!GH1_GraphOps.TryResolveOutput(srcObj, w.Src, out IGH_Param? srcParam, out string srcErr))
             return new WireResult(idx, false, srcErr);

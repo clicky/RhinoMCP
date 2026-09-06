@@ -7,6 +7,45 @@ namespace RhinoAI.Resources;
 
 public static class GH2_GraphOps
 {
+    // Wiring src into dst closes a loop when src already depends on dst, so the walk goes upstream from src looking for dst.
+    public static bool WouldCycle(Document doc, IDocumentObject src, IDocumentObject dst)
+    {
+        HashSet<Guid> seen = [];
+        Queue<IDocumentObject> pending = new();
+        pending.Enqueue(src);
+
+        while (pending.Count > 0)
+        {
+            IDocumentObject current = pending.Dequeue();
+            if (current.InstanceId == dst.InstanceId)
+                return true;
+
+            if (!seen.Add(current.InstanceId))
+                continue;
+
+            foreach (IParameter input in InputsOf(current))
+            {
+                foreach (Guid sourceId in input.Inputs.Forwards)
+                {
+                    IParameter? source = doc.Objects.FindParameter(sourceId);
+                    if (source is null)
+                        continue;
+
+                    pending.Enqueue(source.FoundingObject ?? source);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<IParameter> InputsOf(IDocumentObject obj) => obj switch
+    {
+        GH2Component comp => comp.Parameters.Inputs,
+        IParameter param => [param],
+        _ => [],
+    };
+
     public static int Connect(IParameter src, IParameter dst, bool replace)
     {
         bool wired = dst.Inputs.IndexOf(src.InstanceId) >= 0;
