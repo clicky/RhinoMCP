@@ -81,7 +81,7 @@ public static class AskUserTool
         {
             try { tcs.SetResult(ResolveConversation(doc)); }
             catch (Exception ex) { tcs.SetException(ex); }
-        }), null);
+        }));
         return tcs.Task;
     }
 

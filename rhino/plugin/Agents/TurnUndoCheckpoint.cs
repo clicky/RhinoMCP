@@ -81,7 +81,7 @@ internal sealed class TurnUndoCheckpoint
         {
             try { tcs.SetResult(work()); }
             catch (Exception ex) { tcs.SetException(ex); }
-        }), null);
+        }));
         return tcs.Task;
     }
 }

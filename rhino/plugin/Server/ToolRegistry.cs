@@ -139,7 +139,7 @@ internal sealed class ToolHandler
             try
             { tcs.SetResult(await InvokeCoreAsync(arguments, scope, ct).ConfigureAwait(false)); }
             catch (Exception ex) { tcs.SetException(ex); }
-        }), null);
+        }));
         return tcs.Task;
     }
 

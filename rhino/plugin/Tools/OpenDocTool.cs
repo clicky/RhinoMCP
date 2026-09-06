@@ -1,3 +1,6 @@
+using Rhino.Display;
+using Rhino.DocObjects;
+
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
@@ -19,18 +22,23 @@ public static class OpenDocTool
         int cleared = 0;
         if (clearFirst)
         {
-            var ids = doc.Objects.Select(o => o.Id).ToList();
-            foreach (var id in ids)
-                if (doc.Objects.Delete(id, true)) cleared++;
+            foreach (RhinoObject? obj in doc.Objects)
+            {
+                if (obj is null) continue;
+                if (doc.Objects.Delete(obj.Id, true)) cleared++;
+            }
         }
 
-        var before = doc.Objects.Count;
+        int before = doc.Objects.Count;
         if (!doc.Import(path))
             throw new InvalidOperationException($"Failed to import: {path}");
-        var imported = doc.Objects.Count - before;
+        int imported = doc.Objects.Count - before;
 
-        foreach (var view in doc.Views)
+        foreach (RhinoView? view in doc.Views)
+        {
+            if (view is null) continue;
             view.ActiveViewport.ZoomExtents();
+        }
 
         doc.Views.Redraw();
 
