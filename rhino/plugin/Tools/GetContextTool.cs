@@ -38,7 +38,7 @@ public static class GetContextTool
 
     [McpServerTool("get_context", "Get Context Snapshot", true, false)]
     [Description("One round-trip grounding snapshot of current state: the active-doc selection (ids/types/layers), the active viewport (name + camera summary), a doc summary (object/layer counts), and a Grasshopper summary (component/wire count if a canvas is open). Read-only; pulls everything you need to orient before acting.")]
-    public static string GetContext(RhinoDoc doc)
+    public static IToolResult GetContext(RhinoDoc doc)
     {
         List<string> warnings = [];
 
@@ -54,7 +54,7 @@ public static class GetContextTool
             grasshopper,
             warnings.Count == 0 ? null : [.. warnings]);
 
-        return JsonSerializer.Serialize(snapshot, McpSerializer.Options);
+        return Success(snapshot);
     }
 
     // Shared selection projection: also the source of truth for GetSelectionTool's

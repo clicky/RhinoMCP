@@ -12,11 +12,10 @@ namespace RhinoAI.Tools;
 public static class GH2_PlaceSliderTool
 {
     public record struct SliderInfo(Guid Id, double Min, double Value, double Max, int Decimals, float X, float Y);
-    public record struct ErrResult(bool Ok, string Error);
 
     [McpServerTool("g2_place_slider", "Place GH2 Number Slider", false, false)]
     [Description("Place a Number Slider on the active GH2 canvas with the given range and current value.")]
-    public static string Place(
+    public static IToolResult Place(
         RhinoDoc rhDoc,
         [Description("Minimum slider value.")] double min,
         [Description("Initial slider value.")] double value,
@@ -28,20 +27,21 @@ public static class GH2_PlaceSliderTool
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (decimals < 0 || decimals > 12)
-            return Err($"Invalid decimals '{decimals}'. Valid range: 0..12.");
+            return Failure(ToolError.BadArgument, $"Invalid decimals '{decimals}'", "Valid range: 0..12");
 
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return Err("Could not get or create GH2 document");
+            return GH2_Failures.NoDocument;
 
-        var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);
-        var slider = new NumberSliderObject(name ?? "num", number);
+        UiNumber number = new(decimals, (decimal)value, (decimal)min, (decimal)max);
+        NumberSliderObject slider = new(name ?? "num", number);
 
         doc.Objects.Add(slider, new PointF(x, y));
-        if (solve) doc.Solution.Start();
+        if (solve)
+            doc.Solution.Start();
         GH2_Utils.Redraw();
 
-        var current = slider.InternalNumber;
-        return JsonSerializer.Serialize(new SliderInfo(
+        UiNumber current = slider.InternalNumber;
+        return Success(new SliderInfo(
             slider.InstanceId,
             (double)current.Lower,
             (double)current.Value,
@@ -50,6 +50,4 @@ public static class GH2_PlaceSliderTool
             x,
             y));
     }
-
-    private static string Err(string msg) => JsonSerializer.Serialize(new ErrResult(false, msg));
 }

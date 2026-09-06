@@ -7,8 +7,8 @@ namespace RhinoAI.Tools;
 public static class CreateTool
 {
     [McpServerTool("manage_plugin_commands", "Manage Plugin Commands", false, true)]
-    [Description("Give the user a reusable Rhino command. After every call the new or changed command is usable immediately. Use this when the user wants to create a reusable tool ('create me a command', 'make me a tool for this'). Rhino 9 or later only. Returns JSON with a null error on success.")]
-    public static string ManagePluginCommands(
+    [Description("Give the user a reusable Rhino command. After every call the new or changed command is usable immediately. Use this when the user wants to create a reusable tool ('create me a command', 'make me a tool for this'). Rhino 9 or later only.")]
+    public static IToolResult ManagePluginCommands(
         RhinoDoc doc,
         [Description("add | update | delete")] string action,
         [Description("Command name the user will type in Rhino, Letters, digits and underscores only, no spaces.")] string commandName,
@@ -17,47 +17,42 @@ public static class CreateTool
     {
 
         if (!ScriptProjectRunner.IsSupportedRhino)
-        {
-            return ReturnResult.Failure($"This needs Rhino 9 or later; this is Rhino {RhinoApp.Version.Major}.");
-        }
+            return Failure(ToolError.Unsupported, $"This needs Rhino 9 or later; this is Rhino {RhinoApp.Version.Major}.");
 
         if (!PluginNaming.TryParseAction(action, out PluginCommandAction parsedAction))
-        {
-            return ReturnResult.Failure($"Unknown action \"{action}\"", "Use add, update or delete.");
-        }
+            return Failure(ToolError.BadArgument, $"Unknown action \"{action}\"", "Use add, update or delete.");
 
         string originalName = commandName;
         CommandNameProblem problem = PluginNaming.TryCoerceCommandName(ref commandName);
         if (problem is not CommandNameProblem.None)
-        {
-            return ReturnResult.Failure("Command Name has issues", PluginNaming.Describe(problem, originalName));
-        }
+            return Failure(ToolError.BadArgument, "Command Name has issues", PluginNaming.Describe(problem, originalName));
 
-        ReturnResult result = ScriptProjectRunner.TryCreate(out IProjectRunner runner);
-        if (!result)
+        IToolResult result = ScriptProjectRunner.TryCreate(out IProjectRunner runner);
+        if (result.Error is not null)
             return result;
 
         if (parsedAction is PluginCommandAction.Delete)
         {
-            ReturnResult removeResult = runner.RemoveCommandFromProject(commandName);
-            if (!removeResult) return removeResult;
-            
-            return ReturnResult.Success($"Command {commandName} was removed successfully");
+            IToolResult removeResult = runner.RemoveCommandFromProject(commandName);
+            if (removeResult.Error is not null)
+                return removeResult;
+
+            return Success(ContentBlock.CreateText($"Command {commandName} was removed successfully"));
         }
-        else if (parsedAction is PluginCommandAction.Add or PluginCommandAction.Update)
+
+        if (parsedAction is PluginCommandAction.Add or PluginCommandAction.Update)
         {
             if (string.IsNullOrWhiteSpace(script))
-            {
-                return ReturnResult.Failure($"A Python script is required to {action.ToLowerInvariant()} a command.");
-            }
-            ReturnResult addResult = runner.AddCommandToProject(commandName, script, svg);
-            if (!addResult)
+                return Failure(ToolError.BadArgument, $"A Python script is required to {action.ToLowerInvariant()} a command.");
+
+            IToolResult addResult = runner.AddCommandToProject(commandName, script, svg);
+            if (addResult.Error is not null)
                 return addResult;
 
-            return ReturnResult.Success($"Command {commandName} is now loaded and ready");
+            return Success(ContentBlock.CreateText($"Command {commandName} is now loaded and ready"));
         }
-        
-        return ReturnResult.Failure($"No result for given action and inputs");
+
+        return Failure(ToolError.Failed, "No result for given action and inputs");
     }
 
 }

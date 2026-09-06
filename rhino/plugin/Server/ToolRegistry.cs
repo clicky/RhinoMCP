@@ -3,12 +3,13 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
+using RhinoAI.Tools;
+
 namespace RhinoAI.Server;
 
-// Scan an assembly once at startup, build a name->handler map for every method
-// decorated with [McpServerTool] inside a [McpServerToolType] class. ToolHandler
-// owns its bound parameters, its schema, and the per-tool decision about whether
-// to marshal the invocation onto the Rhino UI thread.
+/// <summary>
+/// Registers all of the MCP Tools
+/// </summary>
 internal sealed class ToolRegistry
 {
 
@@ -19,25 +20,27 @@ internal sealed class ToolRegistry
     public bool TryGet(string name, out ToolHandler handler) =>
         ByName.TryGetValue(name, out handler!);
 
+
+    const BindingFlags FLAGS = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
     public static ToolRegistry Scan(Assembly assembly, IServiceProvider services)
     {
         ToolRegistry registry = new();
         foreach (Type type in SafeGetTypes(assembly))
         {
-            if (type.GetCustomAttribute<McpServerToolTypeAttribute>() is null)
+            if (type?.GetCustomAttribute<McpServerToolTypeAttribute>() is null)
                 continue;
 
-            const BindingFlags flags =
-                BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance |
-                BindingFlags.DeclaredOnly;
-
-            foreach (MethodInfo method in type.GetMethods(flags))
+            foreach (MethodInfo method in type.GetMethods(FLAGS))
             {
                 McpServerToolAttribute? toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
-                if (toolAttr is null)
-                    continue;
+                if (toolAttr is null) continue;
 
                 string name = toolAttr.Name ?? method.Name;
+
+                if (!typeof(IToolResult).IsAssignableFrom(ResultType(method)))
+                    throw new InvalidOperationException($"MCP tool '{name}' returns {method.ReturnType.Name}; every tool must return an IToolResult.");
+
                 string? description = method.GetCustomAttribute<DescriptionAttribute>()?.Description;
                 bool marshalToUi = method.GetCustomAttribute<BackgroundThreadAttribute>() is null;
                 bool inPanelOnly = method.GetCustomAttribute<InPanelOnlyAttribute>() is not null;
@@ -52,6 +55,19 @@ internal sealed class ToolRegistry
             }
         }
         return registry;
+    }
+
+    // What the tool actually hands back once a Task/ValueTask wrapper is peeled off.
+    private static Type ResultType(MethodInfo method)
+    {
+        Type returned = method.ReturnType;
+        if (!returned.IsGenericType)
+            return returned;
+
+        Type definition = returned.GetGenericTypeDefinition();
+        return definition == typeof(Task<>) || definition == typeof(ValueTask<>)
+            ? returned.GetGenericArguments()[0]
+            : returned;
     }
 
     private static IEnumerable<Type> SafeGetTypes(Assembly asm)
@@ -161,18 +177,13 @@ internal sealed class ToolHandler
         }
 
         object? result = await ResultUnwrapper.UnwrapAsync(rawResult).ConfigureAwait(false);
-        return FormatResult(result);
+
+        // Scan rejects any tool that isn't typed to return one, so this only trips
+        // on a tool returning a null IToolResult.
+        if (result is not IToolResult toolResult)
+            throw new InvalidOperationException($"Tool '{Name}' returned no result.");
+
+        return ToolResultFormatter.Format(toolResult);
     }
 
-    private static CallToolResult FormatResult(object? result) => result switch
-    {
-        null => new CallToolResult { Content = { ContentBlock.CreateText("") } },
-        string s => new CallToolResult { Content = { ContentBlock.CreateText(s) } },
-        ContentBlock cb => new CallToolResult { Content = { cb } },
-        IEnumerable<ContentBlock> blocks => new CallToolResult { Content = blocks.ToList() },
-        _ => new CallToolResult
-        {
-            Content = { ContentBlock.CreateText(JsonSerializer.Serialize(result, McpSerializer.Options)) }
-        },
-    };
 }

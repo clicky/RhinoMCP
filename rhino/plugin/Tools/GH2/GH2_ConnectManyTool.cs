@@ -12,32 +12,39 @@ public static class GH2_ConnectManyTool
     public record struct Endpoint(Guid Id, string Param);
     public record struct WireResult(int Index, bool Ok, Endpoint? Src, Endpoint? Dst, string? Error);
     public record struct BatchResult(int Count, int OkCount, WireResult[] Wires);
-    public record struct ErrResult(bool Ok, string Error);
 
     [McpServerTool("g2_connect_many", "Connect GH2 Wires (Batch)", false, false)]
     [Description("Wire multiple output→input connections in one call on the active GH2 canvas. Same selector semantics as 'g2_connect'. A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
-    public static string ConnectMany(
+    public static IToolResult ConnectMany(
         RhinoDoc rhDoc,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
     {
-        if (wires is null || wires.Length == 0) return JsonSerializer.Serialize(new BatchResult(0, 0, Array.Empty<WireResult>()));
+        if (wires is null || wires.Length == 0)
+            return Failure(
+                ToolError.BadArgument,
+                ContentBlock.CreateJson(new BatchResult(0, 0, [])),
+                "No wires were supplied",
+                "Pass at least one {SrcId, Src, DstId, Dst} entry");
 
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return JsonSerializer.Serialize(new ErrResult(false, "No active GH2 document"));
+            return GH2_Failures.NoDocument;
 
-        var results = new WireResult[wires.Length];
+        WireResult[] results = new WireResult[wires.Length];
 
         for (int i = 0; i < wires.Length; i++)
             results[i] = WireOne(doc, i, wires[i]);
 
-        if (solve) doc.Solution.Start();
+        if (solve)
+            doc.Solution.Start();
         GH2_Utils.Redraw();
 
         int okCount = 0;
-        for (int i = 0; i < results.Length; i++) if (results[i].Ok) okCount++;
+        for (int i = 0; i < results.Length; i++)
+            if (results[i].Ok)
+                okCount++;
 
-        return JsonSerializer.Serialize(new BatchResult(wires.Length, okCount, results));
+        return Success(new BatchResult(wires.Length, okCount, results));
     }
 
     private static WireResult WireOne(Document doc, int idx, WireSpec w)
@@ -47,9 +54,9 @@ public static class GH2_ConnectManyTool
         if (!Guid.TryParse(w.DstId, out Guid dstGuid))
             return new WireResult(idx, false, null, null, $"Invalid dst_id '{w.DstId}'");
 
-        var srcObj = doc.Objects.Find(srcGuid);
+        IDocumentObject srcObj = doc.Objects.Find(srcGuid);
         if (srcObj is null) return new WireResult(idx, false, null, null, $"Source '{srcGuid}' not found");
-        var dstObj = doc.Objects.Find(dstGuid);
+        IDocumentObject dstObj = doc.Objects.Find(dstGuid);
         if (dstObj is null) return new WireResult(idx, false, null, null, $"Destination '{dstGuid}' not found");
 
         if (!GH2_GraphOps.TryResolveOutput(srcObj, w.Src, out IParameter? srcParam, out string srcErr))

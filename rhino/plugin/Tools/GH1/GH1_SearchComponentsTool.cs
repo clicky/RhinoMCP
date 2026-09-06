@@ -21,7 +21,7 @@ public static class GH1_SearchComponentsTool
 
     [McpServerTool("g1_search_components", "Search GH1 Components", true, false)]
     [Description("Search the Grasshopper component library by substring. Matches Name, NickName, and Description (case-insensitive). Optional exact-match category/subcategory filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
-    public static string Search(
+    public static IToolResult Search(
         RhinoDoc _,
         [Description("Substring to match against component Name, NickName, and Description. Case-insensitive.")] string query,
         [Description("Optional exact-match category filter (e.g. 'Maths', 'Params').")] string? category = null,
@@ -29,12 +29,13 @@ public static class GH1_SearchComponentsTool
         [Description("Maximum number of results to return.")] int limit = 20,
         [Description("Include obsolete/hidden components (e.g. legacy scripting). Default false.")] bool includeDeprecated = false)
     {
-        if (string.IsNullOrEmpty(query)) return "query is required";
+        if (string.IsNullOrEmpty(query))
+            return Failure(ToolError.BadArgument, "query is required");
 
-        var hits = new List<ProxyHit>();
+        List<ProxyHit> hits = [];
         foreach (IGH_ObjectProxy p in Instances.ComponentServer.ObjectProxies)
         {
-            var d = p.Desc;
+            IGH_InstanceDescription d = p.Desc;
             if (category is not null && !string.Equals(d.Category, category, StringComparison.OrdinalIgnoreCase)) continue;
             if (subcategory is not null && !string.Equals(d.SubCategory, subcategory, StringComparison.OrdinalIgnoreCase)) continue;
             if (!includeDeprecated && GH1_ProxyResolver.IsDeprecated(p)) continue;
@@ -47,7 +48,7 @@ public static class GH1_SearchComponentsTool
             if (hits.Count >= limit) break;
         }
 
-        return JsonSerializer.Serialize(hits);
+        return Success(hits);
     }
 
     private static bool Match(string? haystack, string needle) =>

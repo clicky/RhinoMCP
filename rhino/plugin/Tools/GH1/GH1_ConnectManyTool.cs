@@ -14,17 +14,22 @@ public static class GH1_ConnectManyTool
 
     [McpServerTool("g1_connect_many", "Connect GH1 Wires (Batch)", false, false)]
     [Description("Wire multiple output→input connections in one call. Same selector semantics as 'g1_connect' (numeric index or Name/NickName; '' or '0' for pure params). A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
-    public static string ConnectMany(
+    public static IToolResult ConnectMany(
         RhinoDoc _,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
     {
-        if (wires is null || wires.Length == 0) return JsonSerializer.Serialize(new BatchResult(0, 0, Array.Empty<WireResult>()));
+        if (wires is null || wires.Length == 0)
+            return Failure(
+                ToolError.BadArgument,
+                ContentBlock.CreateJson(new BatchResult(0, 0, [])),
+                "No wires were supplied",
+                "Pass at least one {SrcId, Src, DstId, Dst} entry");
 
         if (!GH1_Utils.TryGetDoc(out GH_Document doc))
-            return "No active GH document";
+            return GH1_Failures.NoDocument;
 
-        var results = new WireResult[wires.Length];
+        WireResult[] results = new WireResult[wires.Length];
 
         for (int i = 0; i < wires.Length; i++)
             results[i] = WireOne(doc, i, wires[i]);
@@ -35,7 +40,7 @@ public static class GH1_ConnectManyTool
         int okCount = 0;
         for (int i = 0; i < results.Length; i++) if (results[i].Ok) okCount++;
 
-        return JsonSerializer.Serialize(new BatchResult(wires.Length, okCount, results));
+        return Success(new BatchResult(wires.Length, okCount, results));
     }
 
     private static WireResult WireOne(GH_Document doc, int idx, WireSpec w)

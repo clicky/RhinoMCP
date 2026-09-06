@@ -1,3 +1,5 @@
+using RhinoAI.Tools;
+
 namespace RhinoAI.ScriptProjects;
 
 internal static class ScriptProjectRunner
@@ -6,11 +8,11 @@ internal static class ScriptProjectRunner
 
     private static IProjectRunner? Runner { get; set; }
 
-    public static ReturnResult TryCreate(out IProjectRunner runner)
+    public static IToolResult TryCreate(out IProjectRunner runner)
     {
         runner = Runner!;
         if (runner is not null)
-            return ReturnResult.Success();
+            return Success();
 
         try
         {
@@ -19,22 +21,24 @@ internal static class ScriptProjectRunner
 #else
             runner = Runner = new RhinoAppProjectRunner();
 #endif
-            return ReturnResult.Success();
+            return Success();
         }
         catch (Exception ex)
         {
-            return ReturnResult.Failure(ex.Message);
+            return Failure(ex);
         }
     }
 
-    public static ReturnResult Reload()
+    public static IToolResult Reload()
     {
-        ReturnResult result = TryCreate(out IProjectRunner runner);
-        if (result) return runner?.Build(true) ?? ReturnResult.Failure("Runner not found");
-        return result;
+        IToolResult result = TryCreate(out IProjectRunner runner);
+        if (result.Error is not null)
+            return result;
+
+        return runner?.Build(true) ?? Failure(ToolError.Failed, "Runner not found");
     }
 
-    public static string RunScript(RhinoDoc doc, Lang lang, string script)
+    public static IToolResult RunScript(RhinoDoc doc, Lang lang, string script)
     {
 #if R9
         RhinoCodeRunScript runner = new ();

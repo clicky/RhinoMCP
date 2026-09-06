@@ -11,7 +11,7 @@ public static class CloseDocTool
 {
     [McpServerTool("close_doc", "Close Document", false, true)]
     [Description("Close the current Rhino document. If path is given, save to that .3dm path first; otherwise discard unsaved changes.")]
-    public static string CloseDoc(
+    public static IToolResult CloseDoc(
         RhinoDoc doc,
         [Description("Optional absolute .3dm path to save to before closing. Omit to close without saving.")] string? path = null)
     {
@@ -26,7 +26,7 @@ public static class CloseDocTool
 
         string? dir = Path.GetDirectoryName(writePath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            throw new DirectoryNotFoundException($"Directory does not exist: {dir}");
+            return Failure(ToolError.RH_File_NotFound, $"Directory does not exist: {dir}");
 
         // UpdateDocumentPath=true so `_-Close "{writePath}"` resolves the doc by path.
         FileWriteOptions options = new ()
@@ -37,13 +37,13 @@ public static class CloseDocTool
         };
 
         if (!doc.WriteFile(writePath, options))
-            throw new InvalidOperationException($"Failed to write before closing: {writePath}");
+            return Failure(ToolError.RH_Write_Failed, $"Failed to write before closing: {writePath}");
 
         doc.Modified = false;
         RhinoApp.RunScript(doc.RuntimeSerialNumber, $"_-Close \"{writePath}\"", false);
 
         if (hasPath)
-            return $"Document saved to {writePath} and closed.";
+            return Success(ContentBlock.CreateText($"Document saved to {writePath} and closed."));
 
         // Mac defers the doc close via Cocoa performSelector:afterDelay:0.1. Wait
         // past that, then delete the temp file. Fire-and-forget so we don't block.
@@ -55,6 +55,6 @@ public static class CloseDocTool
             catch { /* OS temp sweep will get it */ }
         });
 
-        return "Document closed without saving.";
+        return Success(ContentBlock.CreateText("Document closed without saving."));
     }
 }

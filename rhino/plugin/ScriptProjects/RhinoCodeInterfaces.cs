@@ -1,3 +1,4 @@
+using RhinoAI.Tools;
 
 namespace RhinoAI.ScriptProjects;
 
@@ -5,7 +6,7 @@ internal interface IRhinoCodeRunner
 {
     
 
-    public string RunScript(RhinoDoc doc, Lang lang, string script);
+    public IToolResult RunScript(RhinoDoc doc, Lang lang, string script);
 
 
 }
@@ -18,10 +19,10 @@ internal interface IProjectRunner
     
     public ScriptProjectPaths Paths { get; }
 
-    public ReturnResult AddCommandToProject(string commandName, string script, string? svg);
+    public IToolResult AddCommandToProject(string commandName, string script, string? svg);
 
-    public ReturnResult RemoveCommandFromProject(string commandName);
+    public IToolResult RemoveCommandFromProject(string commandName);
 
-    public ReturnResult Build(bool reloadOnly);
+    public IToolResult Build(bool reloadOnly);
 
 }

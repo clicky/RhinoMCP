@@ -33,16 +33,16 @@ public static class GH2_GetCanvasGraphTool
 
     [McpServerTool("g2_get_canvas_graph", "Get GH2 Canvas Graph", true, false)]
     [Description("Return a structured snapshot of the active GH2 canvas: objects (with messages, inputs/outputs and optional volatile data summaries) and wires between them.")]
-    public static string GetGraph(
+    public static IToolResult GetGraph(
         RhinoDoc rhDoc,
         [Description("Include per-param volatile data summaries (branches/items/sample).")] bool include_data = true,
         [Description("How many items to include in each data sample.")] int sample_size = 3)
     {
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return "Could not get GH2 document";
+            return GH2_Failures.NoDocument;
 
-        var objects = new List<ObjectInfo>();
-        var wires = new List<Wire>();
+        List<ObjectInfo> objects = [];
+        List<Wire> wires = [];
 
         foreach (var obj in doc.Objects.Forwards)
         {
@@ -86,7 +86,7 @@ public static class GH2_GetCanvasGraphTool
                 outputs));
         }
 
-        return JsonSerializer.Serialize(new Graph(objects.ToArray(), wires.ToArray()));
+        return Success(new Graph(objects.ToArray(), wires.ToArray()));
     }
 
     private static MessageInfo[] CollectMessages(IDocumentObject obj)

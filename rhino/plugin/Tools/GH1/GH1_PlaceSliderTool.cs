@@ -15,7 +15,7 @@ public static class GH1_PlaceSliderTool
 
     [McpServerTool("g1_place_slider", "Place GH1 Number Slider", false, false)]
     [Description("Place a Number Slider on the active GH1 canvas with the given range and current value. type: 'float' | 'int' | 'even' | 'odd'.")]
-    public static string Place(
+    public static IToolResult Place(
         RhinoDoc rhDoc,
         [Description("Minimum slider value.")] double min,
         [Description("Initial slider value.")] double value,
@@ -27,12 +27,12 @@ public static class GH1_PlaceSliderTool
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (!TryParseAccuracy(type, out GH_SliderAccuracy accuracy))
-            return $"Invalid type '{type}'. Valid values: 'float', 'int', 'even', 'odd'.";
+            return Failure(ToolError.BadArgument, $"Invalid type '{type}'", "Valid values: 'float', 'int', 'even', 'odd'");
 
         if (!GH1_Utils.TryGetOrCreateDoc(rhDoc, out GH_Document doc))
-            return "Could not get or create GH document";
+            return GH1_Failures.NoDocument;
 
-        var slider = new GH_NumberSlider();
+        GH_NumberSlider slider = new();
         slider.CreateAttributes();
 
         slider.Slider.Minimum = (decimal)min;
@@ -40,7 +40,8 @@ public static class GH1_PlaceSliderTool
         slider.Slider.Value = (decimal)value;
         slider.Slider.Type = accuracy;
 
-        if (!string.IsNullOrEmpty(name)) slider.NickName = name;
+        if (!string.IsNullOrEmpty(name))
+            slider.NickName = name;
 
         slider.Attributes.Pivot = new PointF(x, y);
 
@@ -48,7 +49,7 @@ public static class GH1_PlaceSliderTool
         if (solve) doc.NewSolution(false);
         GH1_Utils.ZoomExtents();
 
-        return JsonSerializer.Serialize(new SliderInfo(
+        return Success(new SliderInfo(
             slider.InstanceGuid,
             (double)slider.Slider.Minimum,
             (double)slider.Slider.Value,

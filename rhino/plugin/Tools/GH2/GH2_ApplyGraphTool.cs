@@ -20,7 +20,6 @@ public static class GH2_ApplyGraphTool
     public record struct PlacedRef(string Key, Guid Id, string Kind);
     public record struct PlaceError(string Key, string Error);
     public record struct WireResult(int Index, bool Ok, string? Error);
-    public record struct ErrResult(bool Ok, string Error);
 
     public record struct ApplyResult(
         PlacedRef[] Placed,
@@ -35,7 +34,7 @@ public static class GH2_ApplyGraphTool
 
     [McpServerTool("g2_apply_graph", "Apply GH2 Graph", false, false)]
     [Description("Place sliders + components and wire them in one call on the active GH2 canvas. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g2_connect'. When solve=true (the default) it also solves at the end and reads the result back, returning the same solve summary as g2_solve_canvas: {Solved, Phase, Errors, Warnings, Diagnostics[]}, where each diagnostic is {Id, Name, Nickname, Level (Remark|Warning|Error|Fault), Message}. Solved is true only when the solution completed with no Error or Fault; read the Diagnostics back to see which components failed and why.")]
-    public static string Apply(
+    public static IToolResult Apply(
         RhinoDoc rhDoc,
         [Description("Sliders to place: {Key, Min, Value, Max, Decimals, Name?, X, Y}. Decimals: 0..12.")] SliderSpec[] sliders,
         [Description("Components to place: {Key, Selector, X, Y}. Selector is a Guid (preferred) or component Name.")] ComponentSpec[] components,
@@ -44,7 +43,7 @@ public static class GH2_ApplyGraphTool
         [Description("Also match obsolete/hidden components by name (a Guid always works). Default false.")] bool includeDeprecated = false)
     {
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return JsonSerializer.Serialize(new ErrResult(false, "Could not get or create GH2 document"));
+            return GH2_Failures.NoDocument;
 
         var keyToObj = new Dictionary<string, IDocumentObject>(StringComparer.Ordinal);
         var placed = new List<PlacedRef>();
@@ -131,7 +130,7 @@ public static class GH2_ApplyGraphTool
         int wiresOk = 0;
         for (int i = 0; i < wireResults.Length; i++) if (wireResults[i].Ok) wiresOk++;
 
-        return JsonSerializer.Serialize(new ApplyResult(
+        return Success(new ApplyResult(
             placed.ToArray(),
             placeErrors.ToArray(),
             wireResults,

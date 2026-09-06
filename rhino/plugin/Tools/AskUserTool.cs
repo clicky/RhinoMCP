@@ -14,7 +14,7 @@ public static class AskUserTool
         + "them as a single reply. This tool does NOT wait for the answers: it poses the questions "
         + "and returns immediately. STOP and end your turn after calling it; the user's answers "
         + "arrive as their next message, then continue.")]
-    public static async Task<object> AskUser(
+    public static async Task<IToolResult> AskUser(
         RhinoDoc doc,
         [Description("The questions to ask, in the order they should be shown")] QuestionSpec[] questions)
     {
@@ -37,8 +37,10 @@ public static class AskUserTool
         }
 
         if (posed.Count == 0)
-            return "ask_user needs a non-empty questions array; each entry is "
-                + "{ question, options, multiSelect? } and must carry at least one real option.";
+            return Failure(
+                ToolError.BadArgument,
+                "ask_user needs a non-empty questions array",
+                "Each entry is { question, options, multiSelect? } and must carry at least one real option.");
 
         // Attach to the live Conversation so the panel renders the cards; the Conversation is the
         // single source of truth for pending questions (it survives a panel dock/undock reload,
@@ -62,13 +64,13 @@ public static class AskUserTool
 
         // Non-blocking: the answers are not awaited here. The user answers in the panel and that
         // reply is dispatched as the agent's NEXT prompt, resuming the same live pooled agent.
-        return new
+        return Success(new
         {
             posed = posed.Count,
             outstanding = outstanding.Count,
             note = "Shown to the user in the Rhino panel. Stop now and end your turn; "
                 + "the user's answers will be your next message, then continue.",
-        };
+        });
     }
 
     private readonly record struct ConversationLookup(bool Attached, Conversation Conversation);

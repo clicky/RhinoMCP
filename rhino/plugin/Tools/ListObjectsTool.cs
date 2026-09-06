@@ -7,7 +7,7 @@ public static class ListObjectsTool
 {
     [McpServerTool("list_objects", "List Document Objects", true, false)]
     [Description("List objects in the active document. Filter by name, layer, or geometry type. Pure query — does not change selection or viewport.")]
-    public static string ListObjects(
+    public static IToolResult ListObjects(
         RhinoDoc doc,
         [Description("Object names to match")] string[]? names = null,
         [Description("Layer full path")] string? layer = null,
@@ -16,7 +16,7 @@ public static class ListObjectsTool
         [Description("Include locked objects (default true)")] bool includeLocked = true,
         [Description("Maximum number of objects to return (default 1000)")] int limit = 1000)
     {
-        var settings = new ObjectEnumeratorSettings
+        ObjectEnumeratorSettings settings = new()
         {
             ActiveObjects = true,
             HiddenObjects = includeHidden,
@@ -37,19 +37,19 @@ public static class ListObjectsTool
 
         if (!string.IsNullOrEmpty(layer))
         {
-            var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
+            int idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
             if (idx >= 0)
                 settings.LayerIndexFilter = idx;
             else
                 warning = warning is null ? $"Layer not found: {layer}" : $"{warning} Layer not found: {layer}";
         }
 
-        var nameSet = (names ?? []).ToHashSet(StringComparer.Ordinal);
+        HashSet<string> nameSet = (names ?? []).ToHashSet(StringComparer.Ordinal);
 
-        var matches = doc.Objects.GetObjectList(settings)
+        IEnumerable<RhinoObject> matches = doc.Objects.GetObjectList(settings)
             .Where(o => nameSet.Count == 0 || nameSet.Contains(o.Name ?? string.Empty));
 
-        var truncated = false;
+        bool truncated = false;
         var results = matches
             .Take(limit + 1)
             .Select(o => new
@@ -67,13 +67,12 @@ public static class ListObjectsTool
             results = results.Take(limit).ToArray();
         }
 
-        return JsonSerializer.Serialize(new
+        return Success(new
         {
             count = results.Length,
             truncated,
-            warning,
             objects = results,
-        });
+        }, warning);
     }
 
     private static bool TryParseObjectType(string s, out ObjectType type)

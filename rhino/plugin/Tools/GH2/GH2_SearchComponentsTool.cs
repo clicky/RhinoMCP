@@ -20,7 +20,7 @@ public static class GH2_SearchComponentsTool
 
     [McpServerTool("g2_search_components", "Search GH2 Components", true, false)]
     [Description("Search the GH2 component library by substring. Matches Name and Info (case-insensitive). Optional exact-match chapter/section filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
-    public static string Search(
+    public static IToolResult Search(
         RhinoDoc _,
         [Description("Substring to match against component Name and Info. Case-insensitive.")] string query,
         [Description("Optional exact-match chapter filter (e.g. 'Maths', 'Params').")] string? category = null,
@@ -28,12 +28,13 @@ public static class GH2_SearchComponentsTool
         [Description("Maximum number of results to return.")] int limit = 20,
         [Description("Include obsolete/hidden components (e.g. legacy scripting). Default false.")] bool includeDeprecated = false)
     {
-        if (string.IsNullOrEmpty(query)) return "query is required";
+        if (string.IsNullOrEmpty(query))
+            return Failure(ToolError.BadArgument, "query is required");
 
-        var hits = new List<ProxyHit>();
-        foreach (var p in ObjectProxies.Proxies)
+        List<ProxyHit> hits = [];
+        foreach (ObjectProxy p in ObjectProxies.Proxies)
         {
-            var n = p.Nomen;
+            Nomen n = p.Nomen;
             if (category is not null && !string.Equals(n.Chapter, category, StringComparison.OrdinalIgnoreCase)) continue;
             if (subcategory is not null && !string.Equals(n.Section, subcategory, StringComparison.OrdinalIgnoreCase)) continue;
             if (!includeDeprecated && GH2_ProxyResolver.IsDeprecated(p)) continue;
@@ -46,7 +47,7 @@ public static class GH2_SearchComponentsTool
             if (hits.Count >= limit) break;
         }
 
-        return JsonSerializer.Serialize(hits);
+        return Success(hits);
     }
 
     private static bool Match(string? haystack, string needle) =>

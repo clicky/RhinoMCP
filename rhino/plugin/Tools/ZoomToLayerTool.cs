@@ -1,3 +1,4 @@
+using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 
@@ -8,21 +9,19 @@ public static class ZoomToLayerTool
 {
     [McpServerTool("zoom_to_layer", "Zoom To Layer", false, false)]
     [Description("Zoom the active viewport to fit all objects on a layer (full path).")]
-    public static string ZoomToLayer(
+    public static IToolResult ZoomToLayer(
         RhinoDoc doc,
         [Description("Layer full path")] string layer)
     {
         if (doc.IsHeadless)
-        {
-            return "Cannot zoom in headless doc";
-        }
+            return Failure(ToolError.RH_Doc_Headless);
 
-        var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
+        int idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
 
         if (idx < 0)
-            return $"Layer not found: {layer}";
+            return Failure(ToolError.RH_Layer_NotFound, $"Layer not found: {layer}");
 
-        var settings = new ObjectEnumeratorSettings
+        ObjectEnumeratorSettings settings = new()
         {
             ActiveObjects = true,
             HiddenObjects = true,
@@ -34,25 +33,26 @@ public static class ZoomToLayerTool
             LayerIndexFilter = idx,
         };
 
-        var bb = BoundingBox.Empty;
-        var count = 0;
+        BoundingBox bb = BoundingBox.Empty;
+        int count = 0;
 
-        foreach (var obj in doc.Objects.GetObjectList(settings))
+        foreach (RhinoObject obj in doc.Objects.GetObjectList(settings))
         {
-            if (obj.Geometry == null) continue;
+            if (obj.Geometry is null) continue;
             bb.Union(obj.Geometry.GetBoundingBox(true));
             count++;
         }
 
         if (!bb.IsValid)
-            return $"No geometry on layer: {layer}";
+            return Failure(ToolError.RH_Nothing_Visible, $"No geometry on layer: {layer}");
 
-        var vp = doc.Views.ActiveView?.ActiveViewport
-            ?? throw new InvalidOperationException("No active viewport.");
+        RhinoViewport? vp = doc.Views.ActiveView?.ActiveViewport;
+        if (vp is null)
+            return Failure(ToolError.RH_View_NotFound, guidance: "Ask the user to open a viewport");
 
         vp.ZoomBoundingBox(bb);
         doc.Views.Redraw();
 
-        return $"Zoomed to {count} object(s) on layer \"{layer}\".";
+        return Success(ContentBlock.CreateText($"Zoomed to {count} object(s) on layer \"{layer}\"."));
     }
 }

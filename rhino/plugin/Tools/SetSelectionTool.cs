@@ -7,7 +7,7 @@ public static class SetSelectionTool
 {
     [McpServerTool("set_selection", "Set Selection", false, false)]
     [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection.")]
-    public static string SetSelection(
+    public static IToolResult SetSelection(
         RhinoDoc doc,
         [Description("Object GUIDs")] string[]? ids = null,
         [Description("Object names")] string[]? names = null,
@@ -17,27 +17,34 @@ public static class SetSelectionTool
         ids ??= [];
         names ??= [];
 
-        var selected = 0;
-        var warnings = new List<string>();
+        int selected = 0;
+        List<string> warnings = [];
 
         doc.Objects.UnselectAll();
 
-        var guidSet = new HashSet<Guid>();
-        var malformedIds = new List<string>();
-        foreach (var idStr in ids)
+        HashSet<Guid> guidSet = [];
+        List<string> malformedIds = [];
+        foreach (string idStr in ids)
         {
-            if (Guid.TryParse(idStr, out var g))
+            if (Guid.TryParse(idStr, out Guid g))
                 guidSet.Add(g);
             else
                 malformedIds.Add(idStr);
         }
 
-        var unmatchedGuids = 0;
-        foreach (var guid in guidSet)
+        int unmatchedGuids = 0;
+        foreach (Guid guid in guidSet)
         {
-            var obj = doc.Objects.FindId(guid);
-            if (obj != null) { obj.Select(true); selected++; }
-            else unmatchedGuids++;
+            RhinoObject obj = doc.Objects.FindId(guid);
+            if (obj is not null)
+            {
+                obj.Select(true);
+                selected++;
+            }
+            else
+            {
+                unmatchedGuids++;
+            }
         }
 
         if (malformedIds.Count > 0)
@@ -47,7 +54,7 @@ public static class SetSelectionTool
 
         if (names.Length > 0 || !string.IsNullOrEmpty(layer) || !string.IsNullOrEmpty(geometryType))
         {
-            var settings = new ObjectEnumeratorSettings
+            ObjectEnumeratorSettings settings = new()
             {
                 ActiveObjects = true,
                 HiddenObjects = false,
@@ -74,7 +81,7 @@ public static class SetSelectionTool
             bool layerResolved = true;
             if (!string.IsNullOrEmpty(layer))
             {
-                var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
+                int idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
                 if (idx >= 0)
                 {
                     settings.LayerIndexFilter = idx;
@@ -86,14 +93,14 @@ public static class SetSelectionTool
                 }
             }
 
-            var nameSet = names.ToHashSet(StringComparer.Ordinal);
+            HashSet<string> nameSet = names.ToHashSet(StringComparer.Ordinal);
 
             // If a layer or geometry-type filter was specified but failed to
             // resolve, fall through with zero matches rather than selecting
             // every object in the document.
             if (layerResolved && typeResolved)
             {
-                foreach (var obj in doc.Objects.GetObjectList(settings))
+                foreach (RhinoObject obj in doc.Objects.GetObjectList(settings))
                 {
                     if (nameSet.Count > 0 && !nameSet.Contains(obj.Name ?? string.Empty)) continue;
                     if (guidSet.Contains(obj.Id)) continue;
@@ -105,9 +112,9 @@ public static class SetSelectionTool
 
         doc.Views.Redraw();
 
-        return warnings.Count == 0
-            ? $"Selected {selected} object(s)."
-            : $"Selected {selected} object(s). Warning: {string.Join("; ", warnings)}";
+        return Success(
+            ContentBlock.CreateText($"Selected {selected} object(s)."),
+            warnings.Count == 0 ? null : string.Join("; ", warnings));
     }
 
     private static bool TryParseObjectType(string s, out ObjectType objectType)

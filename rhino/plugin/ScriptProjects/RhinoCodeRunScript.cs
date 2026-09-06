@@ -6,13 +6,14 @@ using Rhino.Runtime.Code;
 using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
 using RhinoAI.ScriptProjects;
+using RhinoAI.Tools;
 
 namespace RhinoAI.ScriptProjects;
 
 internal class RhinoCodeRunScript : IRhinoCodeRunner
 {
 
-    public string RunScript(RhinoDoc doc, Lang lang, string script)
+    public IToolResult RunScript(RhinoDoc doc, Lang lang, string script)
     {
         if (lang == Lang.Python3)
             ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
@@ -30,7 +31,8 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
         SourceCode source = new(spec, script);
         if (!source.TryCreateCode(out Code code))
         {
-            return JsonSerializer.Serialize(new { stdout = string.Empty, error = "Could not create code from the supplied script." });
+            string guidance = string.Join(", ", code.Diagnostics.Select(d => d.Message)); // TODO : Line/column
+            return Failure(ToolError.Failed, "Could not create code from the supplied script.", guidance);
         }
 
         using MemoryStream output = new();
@@ -56,11 +58,13 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
         }
 
         string captured = Encoding.UTF8.GetString(errors.ToArray());
-        return JsonSerializer.Serialize(new
+
+        if (captured.Length > 0 || thrown is not null)
         {
-            stdout = Encoding.UTF8.GetString(output.ToArray()),
-            error = captured.Length > 0 ? captured : thrown,
-        });
+            return Failure(ToolError.Failed, [ContentBlock.CreateText(captured)], thrown ?? "The script wrote to stderr");
+        }
+
+        return Success(ContentBlock.CreateText(Encoding.UTF8.GetString(output.ToArray())));
     }
 }
 

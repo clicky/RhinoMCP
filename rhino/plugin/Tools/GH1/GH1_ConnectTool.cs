@@ -8,12 +8,11 @@ namespace RhinoAI.Tools;
 public static class GH1_ConnectTool
 {
     public record struct Endpoint(Guid Id, string Param);
-    public record struct OkResult(bool Ok, Endpoint Src, Endpoint Dst);
-    public record struct ErrResult(bool Ok, string Error);
+    public record struct Wired(Endpoint Src, Endpoint Dst);
 
     [McpServerTool("g1_connect", "Connect GH1 Wire", false, false)]
     [Description("Wire an output parameter to an input parameter on the active GH1 canvas. 'src' and 'dst' may be a numeric index or a Name/NickName. For pure params (e.g. a slider) pass '' or '0'.")]
-    public static string Connect(
+    public static IToolResult Connect(
         RhinoDoc _,
         [Description("Guid of the source IGH_DocumentObject.")] string src_id,
         [Description("Output identifier: numeric index, output Name, or output NickName. Use '' or '0' for pure params.")] string src,
@@ -22,25 +21,31 @@ public static class GH1_ConnectTool
         [Description("If true, trigger a new solution after wiring. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (!GH1_Utils.TryGetDoc(out GH_Document doc))
-            return Err("No active GH document");
+            return GH1_Failures.NoDocument;
 
-        if (!Guid.TryParse(src_id, out Guid srcGuid)) return Err($"Invalid src_id guid '{src_id}'");
-        if (!Guid.TryParse(dst_id, out Guid dstGuid)) return Err($"Invalid dst_id guid '{dst_id}'");
+        if (!Guid.TryParse(src_id, out Guid srcGuid))
+            return Failure(ToolError.BadArgument, $"Invalid src_id guid '{src_id}'");
 
-        var srcObj = doc.FindObject(srcGuid, true);
-        if (srcObj is null) return Err($"Source object '{srcGuid}' not found");
-        var dstObj = doc.FindObject(dstGuid, true);
-        if (dstObj is null) return Err($"Destination object '{dstGuid}' not found");
+        if (!Guid.TryParse(dst_id, out Guid dstGuid))
+            return Failure(ToolError.BadArgument, $"Invalid dst_id guid '{dst_id}'");
+
+        IGH_DocumentObject srcObj = doc.FindObject(srcGuid, true);
+        if (srcObj is null)
+            return Failure(ToolError.GH_Object_NotFound, $"Source object '{srcGuid}' not found");
+
+        IGH_DocumentObject dstObj = doc.FindObject(dstGuid, true);
+        if (dstObj is null)
+            return Failure(ToolError.GH_Object_NotFound, $"Destination object '{dstGuid}' not found");
 
         if (!TryResolveOutput(srcObj, src, out IGH_Param? srcParam, out string srcErr))
-            return Err(srcErr);
+            return Failure(ToolError.GH_Param_NotFound, srcErr);
+
         if (!TryResolveInput(dstObj, dst, out IGH_Param? dstParam, out string dstErr))
-            return Err(dstErr);
+            return Failure(ToolError.GH_Param_NotFound, dstErr);
 
         if (dstParam!.Sources.Contains(srcParam))
         {
-            return JsonSerializer.Serialize(new OkResult(
-                true,
+            return Success(new Wired(
                 new Endpoint(srcObj.InstanceGuid, srcParam!.Name),
                 new Endpoint(dstObj.InstanceGuid, dstParam!.Name)));
         }
@@ -53,11 +58,10 @@ public static class GH1_ConnectTool
         }
         catch (Exception ex)
         {
-            return Err(ex.Message);
+            return Failure(ex);
         }
 
-        return JsonSerializer.Serialize(new OkResult(
-            true,
+        return Success(new Wired(
             new Endpoint(srcObj.InstanceGuid, srcParam!.Name),
             new Endpoint(dstObj.InstanceGuid, dstParam!.Name)));
     }
@@ -130,11 +134,11 @@ public static class GH1_ConnectTool
             return true;
         }
 
-        foreach (var p in list)
+        foreach (IGH_Param p in list)
         {
             if (string.Equals(p.Name, selector, StringComparison.OrdinalIgnoreCase)) { param = p; return true; }
         }
-        foreach (var p in list)
+        foreach (IGH_Param p in list)
         {
             if (string.Equals(p.NickName, selector, StringComparison.OrdinalIgnoreCase)) { param = p; return true; }
         }
@@ -143,5 +147,4 @@ public static class GH1_ConnectTool
         return false;
     }
 
-    private static string Err(string msg) => JsonSerializer.Serialize(new ErrResult(false, msg));
 }

@@ -14,7 +14,7 @@ public static class GetViewportImageTool
 
     [McpServerTool("get_viewport_image", "Capture Viewport Image", false, false)]
     [Description("Capture the active Rhino viewport as JPG. Returns the image plus a JSON metadata block describing the resulting camera, display mode, framed scene bounds, and on-screen object count — use the metadata to diagnose empty/off-screen captures without re-shooting.")]
-    public static IEnumerable<ContentBlock> GetViewportImage(
+    public static IToolResult GetViewportImage(
         RhinoDoc doc,
         [Description("Image width pixels (default 480) (max 1280) increase sparingly")] int width = 480,
         [Description("Image height pixels (default 270) (max 720) increase sparingly")] int height = 270,
@@ -27,41 +27,37 @@ public static class GetViewportImageTool
         [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out. Applied after boxMin/boxMax if both supplied.")] double? zoom = null)
     {
         if (doc.IsHeadless)
-        {
-            return [ContentBlock.CreateText(SerializeResult(null, $"Cannot capture view in headless doc"))];
-        }
+            return Failure(ToolError.RH_Doc_Headless);
 
         width = Math.Min(width, 1280);
         height = Math.Min(height, 720);
 
-        var activeView = doc.Views.ActiveView
-            ?? throw new InvalidOperationException("No active view.");
+        RhinoView? activeView = doc.Views.ActiveView;
+        if (activeView is null)
+            return Failure(ToolError.RH_View_NotFound, guidance: "Ask the user to open a viewport");
 
         Bitmap? bitmap = null;
-        string? error = null;
         CaptureMetadata? meta = null;
 
-        var vp = activeView.ActiveViewport;
+        RhinoViewport vp = activeView.ActiveViewport;
 
         try
         {
             if (!string.IsNullOrEmpty(view))
             {
-                var proj = ParseProjection(view);
+                DefinedViewportProjection proj = ParseProjection(view);
                 if (proj == DefinedViewportProjection.None)
-                {
-                    return [ContentBlock.CreateText(SerializeResult(meta, $"Unknown view: {view}"))];
-                }
+                    return Failure(ToolError.BadArgument, $"Unknown view: {view}");
+
                 vp.SetProjection(proj, null, true);
             }
 
             if (!string.IsNullOrEmpty(displayMode))
             {
-                var mode = FindDisplayMode(displayMode);
+                DisplayModeDescription? mode = FindDisplayMode(displayMode);
                 if (mode is null)
-                {
-                    return [ContentBlock.CreateText(SerializeResult(meta, $"Unknown display mode: {displayMode}"))];
-                }
+                    return Failure(ToolError.BadArgument, $"Unknown display mode: {displayMode}");
+
                 vp.DisplayMode = mode;
             }
 
@@ -73,13 +69,11 @@ public static class GetViewportImageTool
 
             if (boxMin is not null && boxMax is not null)
             {
-                var bb = new BoundingBox((Point3d)boxMin, (Point3d)boxMax);
-                if (bb.IsValid)
-                    vp.ZoomBoundingBox(bb);
-                else
-                {
-                    return [ContentBlock.CreateText(SerializeResult(meta, "boxMin/boxMax do not form a valid bounding box."))];
-                }
+                BoundingBox bb = new((Point3d)boxMin, (Point3d)boxMax);
+                if (!bb.IsValid)
+                    return Failure(ToolError.BadArgument, "boxMin/boxMax do not form a valid bounding box.");
+
+                vp.ZoomBoundingBox(bb);
             }
 
             if (zoom.HasValue)
@@ -91,34 +85,29 @@ public static class GetViewportImageTool
 
             if (meta.VisibleObjectCount == 0)
             {
-                return [ContentBlock.CreateText(SerializeResult(meta, "Viewport is empty — no document objects intersect the view frustum. " +
-                        "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives."))];
+                return Failure(
+                    ToolError.RH_Nothing_Visible,
+                    ContentBlock.CreateText(SerializeResult(meta)),
+                    "No document objects intersect the view frustum",
+                    "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives.");
             }
 
             bitmap = activeView.CaptureToBitmap(new Size(width, height));
         }
         catch (Exception ex)
         {
-            error = $"Capture failed: {ex.Message}";
+            return Failure(ToolError.Exception, ContentBlock.CreateText(SerializeResult(meta)), $"Capture failed: {ex.Message}");
         }
 
-        if (error is not null)
-        {
-            return [ContentBlock.CreateText(SerializeResult(meta, error))];
-        }
         if (bitmap is null)
-        {
-            return [ContentBlock.CreateText(SerializeResult(meta, "could not capture image"))];
-        }
+            return Failure(ToolError.Failed, ContentBlock.CreateText(SerializeResult(meta)), "Could not capture image");
 
-        using var ms = new MemoryStream();
+        using MemoryStream ms = new();
         bitmap.Save(ms, ImageFormat.Jpeg);
 
-        return
-        [
-            ContentBlock.CreateText(SerializeResult(meta, null)),
-            ContentBlock.CreateImage(ms.ToArray(), "image/jpeg"),
-        ];
+        return Success(
+            ContentBlock.CreateText(SerializeResult(meta)),
+            ContentBlock.CreateImage(ms.ToArray(), "image/jpeg"));
     }
 
     private sealed class CaptureMetadata
@@ -133,22 +122,22 @@ public static class GetViewportImageTool
 
     private static CaptureMetadata GatherMetadata(RhinoView activeView, int width, int height)
     {
-        var vp = activeView.ActiveViewport;
-        var doc = activeView.Document;
+        RhinoViewport vp = activeView.ActiveViewport;
+        RhinoDoc doc = activeView.Document;
 
-        var meta = new CaptureMetadata
+        CaptureMetadata meta = new()
         {
             Viewport = GetContextTool.SummarizeViewport(vp),
             ImageWidth = width,
             ImageHeight = height,
         };
 
-        var sceneBox = BoundingBox.Empty;
+        BoundingBox sceneBox = BoundingBox.Empty;
         int total = 0;
         int visible = 0;
-        var pipeline = activeView.DisplayPipeline;
+        DisplayPipeline pipeline = activeView.DisplayPipeline;
 
-        var settings = new ObjectEnumeratorSettings
+        ObjectEnumeratorSettings settings = new()
         {
             ActiveObjects = true,
             HiddenObjects = false,
@@ -157,13 +146,13 @@ public static class GetViewportImageTool
             VisibleFilter = true,
         };
 
-        foreach (var obj in doc.Objects.GetObjectList(settings))
+        foreach (RhinoObject obj in doc.Objects.GetObjectList(settings))
         {
-            var bb = obj.Geometry.GetBoundingBox(true);
+            BoundingBox bb = obj.Geometry.GetBoundingBox(true);
             if (!bb.IsValid) continue;
             total++;
             sceneBox.Union(bb);
-            if (pipeline != null && pipeline.IsVisible(bb))
+            if (pipeline is not null && pipeline.IsVisible(bb))
                 visible++;
         }
 
@@ -173,11 +162,10 @@ public static class GetViewportImageTool
         return meta;
     }
 
-    private static string SerializeResult(CaptureMetadata? meta, string? error)
+    private static string SerializeResult(CaptureMetadata? meta)
     {
         var payload = new
         {
-            error,
             metadata = meta is null ? null : new
             {
                 viewport = new
@@ -224,7 +212,7 @@ public static class GetViewportImageTool
 
     private static DisplayModeDescription? FindDisplayMode(string name)
     {
-        foreach (var mode in DisplayModeDescription.GetDisplayModes())
+        foreach (DisplayModeDescription mode in DisplayModeDescription.GetDisplayModes())
         {
             if (string.Equals(mode.EnglishName, name, StringComparison.OrdinalIgnoreCase))
                 return mode;

@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 
 using Rhino.FileIO;
 
+using RhinoAI.Tools;
+
 namespace RhinoAI.Internal;
 
 // Router-private control tools. The router talks to these over the same MCP
@@ -14,7 +16,7 @@ public static class RouterControlTool
 {
     [McpServerTool("_router_spawn_listener")]
     [Description("Router-internal: create a new RhinoDoc and start an MCP listener bound to it. Returns { port }.")]
-    public static string SpawnListener()
+    public static IToolResult SpawnListener()
     {
         RhinoDoc? newDoc = null;
         int port = 0;
@@ -66,7 +68,7 @@ public static class RouterControlTool
         if (error is not null)
             throw new InvalidOperationException(error);
 
-        return JsonSerializer.Serialize(new { port });
+        return Success(new { port });
     }
 
     // Close a freshly-`_New`'d doc we couldn't attach a listener to, so a port or
@@ -108,11 +110,11 @@ public static class RouterControlTool
 
     [McpServerTool("_router_close_listener")]
     [Description("Router-internal: stop the MCP listener on the given port and close its associated doc without saving.")]
-    public static string CloseListener(int port)
+    public static IToolResult CloseListener(int port)
     {
         bool ok = false;
         RhinoApp.InvokeAndWait(() => { ok = RhinoAIHost.StopByPort(port); });
-        return JsonSerializer.Serialize(new { closed = ok });
+        return Success(new { closed = ok });
     }
 
     // _Exit shows a save-changes dialog for modified docs, which would deadlock
@@ -121,7 +123,7 @@ public static class RouterControlTool
     // HTTP response can unwind before Rhino starts tearing itself down.
     [McpServerTool("_router_quit_app")]
     [Description("Router-internal: schedule a graceful Rhino exit via _Exit. Returns immediately; the actual quit fires shortly after on the UI thread.")]
-    public static string QuitApp()
+    public static IToolResult QuitApp()
     {
         _ = Task.Run(async () =>
         {
@@ -140,6 +142,6 @@ public static class RouterControlTool
                 RhinoApp.WriteLine($"[Rhino MCP] _Exit dispatch failed: {ex.Message}");
             }
         });
-        return JsonSerializer.Serialize(new { scheduled = true });
+        return Success(new { scheduled = true });
     }
 }
