@@ -29,7 +29,7 @@ internal static class OpenDocTool
             }
         }
 
-        int before = doc.Objects.Count;
+        int before = doc.Objects.Count - removables.Count;
         if (!doc.Import(path))
             return Failure(ToolError.Failed, $"Failed to import: {path}");
 
@@ -55,7 +55,7 @@ internal static class OpenDocTool
         {
             path,
             imported,
-            removables.Count,
+            cleared = removables.Count,
         });
     }
 }
