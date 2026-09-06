@@ -86,14 +86,16 @@ public static class GetViewportImageTool
 
             meta = GatherMetadata(activeView, width, height);
 
-            if (meta.VisibleObjectCount == 0)
-            {
-                return Failure(
-                    ToolError.RH_Nothing_Visible,
-                    ContentBlock.CreateText(SerializeResult(meta)),
-                    "No document objects intersect the view frustum",
-                    "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives.");
-            }
+            // Claude likes to "see" GH script creations, which is made impossible with this check
+            // Whilst a GH is open or has components could be checked, other 3rd party plugins may also create phantom objects
+            // if (meta.VisibleObjectCount == 0)
+            // {
+            //     return Failure(
+            //         ToolError.RH_Nothing_Visible,
+            //         ContentBlock.CreateText(SerializeResult(meta)),
+            //         "No document objects intersect the view frustum",
+            //         "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives.");
+            // }
 
             bitmap = activeView.CaptureToBitmap(new Size(width, height));
         }
