@@ -417,6 +417,15 @@ try {
   await shot('06-answered');
 
   // ------------------------------------------------------------------- history
+  // Leave the transcript scrolled up first: the resume below must not inherit that position.
+  const seat = await page.evaluate(() => {
+    const r = document.querySelector('.transcript').getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  });
+  await page.mouse.move(seat.x, seat.y);
+  await page.mouse.wheel({ deltaY: -3000 });
+  await wait(300);
+
   await page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][0].click());
   await wait(300);
   const history = await page.evaluate(() => document.querySelectorAll('.convo').length);
@@ -433,6 +442,21 @@ try {
   }));
   check('loading a saved conversation swaps the composer for a review bar', review.reviewBar === 1 && review.composer === 0);
   await shot('07-review');
+
+  // A resumed conversation is a different transcript, so where the user had scrolled to in the last
+  // one means nothing: it has to land on the newest message, not halfway up.
+  await page.evaluate(() =>
+    [...document.querySelectorAll('.review-bar .btn')].find((b) => b.textContent.trim() === 'Resume')?.click());
+  const resumed = await until(
+    page,
+    `(() => {
+       const t = document.querySelector('.transcript');
+       return document.querySelectorAll('.composer').length === 1 &&
+         t.scrollHeight - t.scrollTop - t.clientHeight < 30 ? { back: true } : null;
+     })()`,
+    3000,
+  );
+  check('resuming a conversation starts at the newest message', resumed !== null);
 
   // -------------------------------------------------- too-old engine fallback
   const old = await browser.newPage();
@@ -470,9 +494,7 @@ try {
       .some((rule) => rule.cssText.includes('color-mix')))));
 
   // --------------------------------------------------------- notices / status
-  // The review check above left the panel read-only, which has no composer.
-  await page.evaluate(() => document.querySelector('.review-bar .btn')?.click());
-  await wait(400);
+  // Resume above already left review, so the composer is back.
   await page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][2].click());
   await wait(300);
   const placement = await page.evaluate(() => {
@@ -788,6 +810,58 @@ try {
       && answered.items[0].answers[0] === 'Yes'
       && answered.items[1].answers[0] === "I don't know"
       && answered.items.every((i) => typeof i.id === 'string'), JSON.stringify(answered));
+
+    // ------------------------------------------------- resume, the way Rhino replays it
+    // ConversationFeed.Replay posts an empty snapshot and then the turns one event at a time, each
+    // its own ExecuteScriptAsync, and every agent message renders its markdown a frame later. So
+    // the transcript is still growing long after the snapshot lands: a resume that scrolls once
+    // stops halfway up. Fed here the same way, with the panel left scrolled up beforehand.
+    const line = 'The facade layer holds 148 surfaces, most of them planar panels on the south elevation. ';
+    const replay = (session, count) => {
+      const out = [{ type: 'conversation', snapshot: { sessionId: session, agent: 'claude', docTitle: 'tower-study.3dm', startedAt: '2026-01-01T09:00:00.0000000+00:00', turns: [], readOnly: false } }];
+      for (let i = 0; i < count; i++) {
+        const id = `${session}-turn-${i}`;
+        out.push({ type: 'turn.begin', turn: { id, prompt: `Question ${i}`, attachments: [], context: [], startedAt: '2026-01-01T09:00:00.0000000+00:00', status: 'running', blocks: [], plan: [], undoable: true } });
+        out.push({ type: 'turn.text', turnId: id, blockId: `${id}-b1`, delta: line.repeat(3) });
+        out.push({ type: 'turn.end', turnId: id, status: 'ok' });
+      }
+      return out;
+    };
+    const post = async (batch) => {
+      for (const event of batch) {
+        await host.evaluate((e) => window.rhinoAI.receive(e), event);
+        await wait(20);
+      }
+    };
+    const tail = () => host.evaluate(() => {
+      const t = document.querySelector('.transcript');
+      return { gap: Math.round(t.scrollHeight - t.scrollTop - t.clientHeight), turns: document.querySelectorAll('.turn').length };
+    });
+
+    await post(replay('sess-a', 8));
+    await wait(1600);
+    await host.evaluate(() => document.querySelector('.transcript').scrollTo({ top: 0 }));
+    await wait(200);
+    await post(replay('sess-b', 8));
+    await wait(1600);
+    const landed = await tail();
+    check('a staged replay lands on the newest message, not partway up',
+      landed.turns === 8 && landed.gap < 30, JSON.stringify(landed));
+
+    // The counterpart: a replay must not fight the user reading back through it.
+    const reading = replay('sess-c', 8);
+    await post(reading.slice(0, 12));
+    const seat = await host.evaluate(() => {
+      const r = document.querySelector('.transcript').getBoundingClientRect();
+      return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    });
+    await host.mouse.move(seat.x, seat.y);
+    await host.mouse.wheel({ deltaY: -4000 });
+    await post(reading.slice(12));
+    await wait(1600);
+    const readingBack = await tail();
+    check('a gesture during a replay keeps the user where they scrolled to',
+      readingBack.gap > 200, JSON.stringify(readingBack));
 
     await host.close();
   }

@@ -1,4 +1,4 @@
-import { each, el, onCleanup, when } from '../core/dom.js';
+import { bind, each, el, onCleanup, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { clockTime, formatTokens, relativeTime } from '../state/format.js';
 import type { BlockView, TurnView } from '../state/store.js';
@@ -204,6 +204,45 @@ export function transcript(ctx: PanelContext): Child {
     ),
   );
 
+  // Deliberately not scrollTop = scrollHeight. The panel carries a CSS zoom (0.9 at 100%, 1.8 at the
+  // top of the ladder), and an engine that reports scrollHeight in the zoomed scale but clamps
+  // scrollTop in the unzoomed one turns that assignment into a short hop: at 200% it stops about
+  // halfway. Any value past the end clamps to the real bottom in every scale.
+  const PAST_THE_END = 1e7;
+  const toBottom = (): void => {
+    scroller.scrollTop = PAST_THE_END;
+  };
+
+  // A replay is over when the transcript has held its height for this long; the cap is there for
+  // content that never settles, so a stuck landing can never own the scroller for good.
+  const SETTLED_MS = 1200;
+  const LANDING_CAP_MS = 20000;
+
+  let landing = 0;
+  function stopLanding(): void {
+    if (landing === 0) return;
+    cancelAnimationFrame(landing);
+    landing = 0;
+  }
+
+  function land(): void {
+    stopLanding();
+    const giveUpAt = Date.now() + LANDING_CAP_MS;
+    let height = -1;
+    let grewAt = Date.now();
+    const step = (): void => {
+      landing = 0;
+      toBottom();
+      const now = Date.now();
+      if (scroller.scrollHeight !== height) {
+        height = scroller.scrollHeight;
+        grewAt = now;
+      }
+      if (now - grewAt < SETTLED_MS && now < giveUpAt) landing = requestAnimationFrame(step);
+    };
+    landing = requestAnimationFrame(step);
+  }
+
   // Scroll events are not a reliable signal of intent. Our own autoscroll produces them, and so
   // does the browser's scroll anchoring when the composer resizes or content lands above the
   // viewport, which is what used to unpin the transcript mid-stream and strand the user halfway up.
@@ -211,6 +250,7 @@ export function transcript(ctx: PanelContext): Child {
   let intentUntil = 0;
   const noteIntent = (): void => {
     intentUntil = Date.now() + 400;
+    stopLanding();
   };
 
   const scroller = el(
@@ -238,17 +278,33 @@ export function transcript(ctx: PanelContext): Child {
   // Content height is the only signal that matters for autoscroll, and the browser already knows
   // it. No deferred layout pass, no AsyncInvoke, no "scroll after Eto settles".
   const observer = new ResizeObserver(() => {
-    if (ui.pinned.peek()) scroller.scrollTop = scroller.scrollHeight;
+    if (ui.pinned.peek()) toBottom();
     // Only agent output counts as unread: the user expanding a card grew the content too.
     else if (store.running.peek()) ui.hasNew.set(true);
   });
   observer.observe(stream);
   onCleanup(() => observer.disconnect());
 
+  // A snapshot replaces the whole transcript (resume, load, reconnect), and where the user had
+  // scrolled to in the old one means nothing in the new one: it has to land on the newest message,
+  // however they left the last conversation.
+  //
+  // One jump cannot do that, because the transcript is nowhere near its final height when the
+  // snapshot lands: the host replays the turns one event at a time, and every agent message renders
+  // its markdown a frame after its text arrives. So hold the view against the bottom until the
+  // content stops growing, and let only a real gesture out of it.
+  bind(() => {
+    store.session();
+    ui.pinned.set(true);
+    ui.hasNew.set(false);
+    land();
+  });
+  onCleanup(stopLanding);
+
   const jumpToLatest = () => {
     ui.pinned.set(true);
     ui.hasNew.set(false);
-    scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+    scroller.scrollTo({ top: PAST_THE_END, behavior: 'smooth' });
   };
 
   return el(
