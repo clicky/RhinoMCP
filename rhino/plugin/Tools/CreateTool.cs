@@ -42,7 +42,7 @@ public static class CreateTool
             ReturnResult removeResult = runner.RemoveCommandFromProject(commandName);
             if (!removeResult) return removeResult;
             
-            return ReturnResult.Success($"Comand {commandName} was removed successfully");
+            return ReturnResult.Success($"Command {commandName} was removed successfully");
         }
         else if (parsedAction is PluginCommandAction.Add or PluginCommandAction.Update)
         {
@@ -54,7 +54,7 @@ public static class CreateTool
             if (!addResult)
                 return addResult;
 
-            return ReturnResult.Success($"Comand {commandName} is now loaded and ready");
+            return ReturnResult.Success($"Command {commandName} is now loaded and ready");
         }
         
         return ReturnResult.Failure($"No result for given action and inputs");
