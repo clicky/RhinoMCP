@@ -189,7 +189,32 @@ internal sealed class ToolHandler
         if (result is not IToolResult toolResult)
             throw new InvalidOperationException($"Tool '{Name}' returned no result.");
 
-        return ToolResultFormatter.Format(toolResult);
+        return ToolResultFormatter.Format(toolResult, IgnoredArguments(arguments));
+    }
+
+    // Unclaimed arguments are honoured as far as they can be (dropped) rather than refused,
+    // so the caller is told instead of watching a call succeed and change nothing.
+    private string? IgnoredArguments(IDictionary<string, JsonElement>? arguments)
+    {
+        if (arguments is null || arguments.Count == 0)
+            return null;
+
+        string[] accepted = _parameters
+            .Where(p => p.IncludeInSchema)
+            .Select(p => p.WireName)
+            .ToArray();
+
+        string[] ignored = arguments.Keys
+            .Where(name => !accepted.Contains(name, StringComparer.Ordinal))
+            .ToArray();
+
+        if (ignored.Length == 0)
+            return null;
+
+        string names = string.Join(", ", ignored.Select(n => $"'{n}'"));
+        string subject = ignored.Length == 1 ? "it is not an argument" : "they are not arguments";
+
+        return $"Ignored {names} because {subject} '{Name}' accepts. Its arguments are: {string.Join(", ", accepted)}";
     }
 
     private static void EnsureGh2IsLoaded(string toolName, object?[] args)

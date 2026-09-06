@@ -88,6 +88,33 @@ public class ToolResultFormatterTests
     }
 
     [Test]
+    public void An_ignored_argument_note_becomes_guidance_on_an_otherwise_silent_success()
+    {
+        CallToolResult result = ToolResultFormatter.Format(
+            ToolResult.Success(ContentBlock.CreateText("Camera updated.")),
+            "Ignored 'view' because it is not an argument 'set_camera' accepts. Its arguments are: location, target");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsError, Is.False);
+            Assert.That(Envelope(result).GetProperty("guidance").GetString(), Does.StartWith("Ignored 'view'"));
+            Assert.That(result.Content[1].Text, Is.EqualTo("Camera updated."));
+        });
+    }
+
+    [Test]
+    public void An_ignored_argument_note_joins_the_tools_own_guidance()
+    {
+        CallToolResult result = ToolResultFormatter.Format(
+            ToolResult.Success(ContentBlock.CreateText("done"), "limit -5 was clamped to 1"),
+            "Ignored 'view' because it is not an argument this tool accepts");
+
+        Assert.That(
+            Envelope(result).GetProperty("guidance").GetString(),
+            Is.EqualTo("limit -5 was clamped to 1; Ignored 'view' because it is not an argument this tool accepts"));
+    }
+
+    [Test]
     public void Failure_carries_error_message_and_guidance()
     {
         CallToolResult result = ToolResultFormatter.Format(
