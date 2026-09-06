@@ -32,6 +32,12 @@ public static class GetViewportImageTool
         width = Math.Min(width, 1280);
         height = Math.Min(height, 720);
 
+        if (width <= 0)
+            return Failure(ToolError.BadArgument, $"{nameof(width)} was < 0", $"Pass a {nameof(width)} that is > 0.");
+        
+        if (height <= 0)
+            return Failure(ToolError.BadArgument, $"{nameof(height)} was < 0", $"Pass a {nameof(height)} that is > 0.");
+
         RhinoView? activeView = doc.Views.ActiveView;
         if (activeView is null)
             return Failure(ToolError.RH_View_NotFound, guidance: "Ask the user to open a viewport");
@@ -154,7 +160,8 @@ public static class GetViewportImageTool
         foreach (RhinoObject obj in doc.Objects.GetObjectList(settings))
         {
             BoundingBox bb = obj.Geometry.GetBoundingBox(true);
-            if (!bb.IsValid) continue;
+            if (!bb.IsValid)
+                continue;
             total++;
             sceneBox.Union(bb);
             if (pipeline is not null && pipeline.IsVisible(bb))
