@@ -18,11 +18,56 @@ internal static class RhinoAIHost
     // Re-advertise live listeners on this interval. Lets a spuriously-reaped slot 
     // re-adopt on its own instead of staying gone until the user re-runs MCPStart. 
     // Re-dropping a already-adopted listener is a no-op.
-    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
+    private static TimeSpan HeartbeatInterval { get; } = TimeSpan.FromSeconds(15);
 
-    static RhinoAIHost()
+    // Re-bound by the replacing document, so a swap doesn't strand clients on a fixed port.
+    private static int? PortFreedByLastClose { get; set; }
+
+    private static void OpenServer(object? sender, DocumentOpenEventArgs e)
     {
-        RhinoDoc.CloseDocument += CloseServer;
+        if (e.Merge)
+            return;
+
+        if (e.Reference)
+            return;
+
+        OpenNewServer(sender, e);
+    }
+
+    private static void OpenNewServer(object? sender, DocumentEventArgs e)
+    {
+        if (e.Document is null)
+            return;
+
+        if (HasStarted(e.Document))
+            return;
+
+        int? wanted = PortFreedByLastClose;
+        if (!TryGetReplacementPort(out int port))
+        {
+            RhinoApp.WriteLine("[Rhino MCP] No free port available; the MCP server did not restart.");
+            return;
+        }
+
+        if (!Start(e.Document, port))
+        {
+            RhinoApp.WriteLine($"[Rhino MCP] The MCP server failed to restart on port {port}.");
+            return;
+        }
+
+        if (wanted is int previous && previous != port)
+            RhinoApp.WriteLine($"[Rhino MCP] Port {previous} was unavailable; MCP server moved to http://localhost:{port}/");
+    }
+
+    private static bool TryGetReplacementPort(out int port)
+    {
+        int? recycled = PortFreedByLastClose;
+        PortFreedByLastClose = null;
+
+        if (recycled is int candidate && TryBindCandidate(candidate, out port))
+            return true;
+
+        return TryGetNextPort(out port);
     }
 
     // A doc that owned a listener is closing (File>New/Open, or a plain close). 
@@ -31,11 +76,14 @@ internal static class RhinoAIHost
     {
         if (!Servers.Remove(e.DocumentSerialNumber, out McpServer? server))
             return;
+
         if (server is not null)
         {
+            PortFreedByLastClose = server.Port;
             WriteDeparture(server.Port);
             server.Stop();
         }
+
         StopHeartbeatIfIdle();
     }
 
@@ -46,8 +94,10 @@ internal static class RhinoAIHost
     public static bool TryGetPortFor(RhinoDoc doc, out int port)
     {
         port = -1;
-        if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server)) return false;
-        if (!server.HasStarted) return false;
+        if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server))
+            return false;
+        if (!server.HasStarted)
+            return false;
         port = server.Port;
         return true;
     }
@@ -92,8 +142,9 @@ internal static class RhinoAIHost
 
     public static bool Start(RhinoDoc doc, int port)
     {
-        if (HasStarted(doc))
-            return true;
+        if (TryGetPortFor(doc, out int existingPort))
+            return existingPort == port;
+
         McpServer server = new();
         Servers[doc.RuntimeSerialNumber] = server;
 
@@ -306,4 +357,12 @@ internal static class RhinoAIHost
 
         return true;
     }
+
+    internal static void RegisterDocumentWatcher()
+    {
+        RhinoDoc.CloseDocument += CloseServer;
+        RhinoDoc.NewDocument += OpenNewServer;
+        RhinoDoc.EndOpenDocument += OpenServer;
+    }
+
 }
