@@ -194,13 +194,15 @@ internal sealed class ToolHandler
 
     private static void EnsureGh2IsLoaded(string toolName, object?[] args)
     {
+#if R9
         if (GH2Loaded) return;
         if (args is null) return;
         if (args.Length < 1) return;
         if (args[0] is not RhinoDoc doc) return;
         if (string.IsNullOrEmpty(toolName)) return;
         if (!toolName.Contains("G2_", StringComparison.OrdinalIgnoreCase)) return;
-        
+
         GH2Loaded = !GH2_StartTool.Launch(doc).IsFailure;
+#endif
     }
 }

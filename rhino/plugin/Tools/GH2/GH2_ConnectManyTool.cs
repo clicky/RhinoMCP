@@ -20,6 +20,7 @@ public static class GH2_ConnectManyTool
     public static async Task<IToolResult> ConnectMany(
         RhinoDoc rhDoc,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
+        [Description("If true (the default), sources already wired into a destination input before this call are removed first. Wires added within this same call accumulate. Pass false to add alongside everything.")] bool replace = true,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
     {
         if (wires is null || wires.Length == 0)
@@ -33,9 +34,10 @@ public static class GH2_ConnectManyTool
             return GH2_Failures.NoDocument;
 
         WireResult[] results = new WireResult[wires.Length];
+        Rewiring rewiring = new(replace);
 
         for (int i = 0; i < wires.Length; i++)
-            results[i] = WireOne(doc, i, wires[i]);
+            results[i] = WireOne(doc, i, wires[i], rewiring);
 
         GH2SolveSummary? summary = solve ? await GH2_Diagnostics.SolveAsync(doc) : null;
         GH2_Utils.Redraw();
@@ -45,10 +47,10 @@ public static class GH2_ConnectManyTool
             if (results[i].Ok)
                 okCount++;
 
-        return Success(new BatchResult(wires.Length, okCount, results, summary));
+        return Success(new BatchResult(wires.Length, okCount, results, summary), rewiring.Guidance);
     }
 
-    private static WireResult WireOne(Document doc, int idx, WireSpec w)
+    private static WireResult WireOne(Document doc, int idx, WireSpec w, Rewiring rewiring)
     {
         if (!Guid.TryParse(w.SrcId, out Guid srcGuid))
             return new WireResult(idx, false, null, null, $"Invalid src_id '{w.SrcId}'");
@@ -70,8 +72,7 @@ public static class GH2_ConnectManyTool
 
         try
         {
-            if (dstParam!.Inputs.IndexOf(srcParam!.InstanceId) < 0)
-                Connections.Connect(srcParam!, dstParam!);
+            rewiring.Note(GH2_GraphOps.Connect(srcParam!, dstParam!, rewiring.ShouldClear(dstParam!.InstanceId)));
         }
         catch (Exception ex)
         {

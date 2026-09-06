@@ -19,6 +19,7 @@ public static class GH2_ConnectTool
         [Description("Output identifier: numeric index, output Name, or UserName. Use '' or '0' for pure params.")] string src,
         [Description("Guid of the destination IDocumentObject.")] string dst_id,
         [Description("Input identifier: numeric index, input Name, or UserName. Use '' or '0' for pure params.")] string dst,
+        [Description("If true (the default), any sources already wired into the destination input are removed first, so this becomes its only wire. Pass false to add alongside them.")] bool replace = true,
         [Description("If true, trigger a new solution after wiring. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
@@ -48,16 +49,11 @@ public static class GH2_ConnectTool
         if (!GH2_GraphOps.TryResolveInput(dstObj, dst, out IParameter? dstParam, out string dstErr))
             return Failure(ToolError.GH_Param_NotFound, dstErr);
 
-        if (dstParam!.Inputs.IndexOf(srcParam!.InstanceId) >= 0)
-        {
-            return Success(new Wired(
-                new Endpoint(srcObj.InstanceId, srcParam!.Nomen.Name),
-                new Endpoint(dstObj.InstanceId, dstParam!.Nomen.Name)));
-        }
-
+        int removed = 0;
         try
         {
-            Connections.Connect(srcParam!, dstParam!);
+            removed = GH2_GraphOps.Connect(srcParam!, dstParam!, replace);
+
             if (solve)
                 doc.Solution.Start();
             GH2_Utils.Redraw();
@@ -67,8 +63,10 @@ public static class GH2_ConnectTool
             return Failure(ex);
         }
 
-        return Success(new Wired(
-            new Endpoint(srcObj.InstanceId, srcParam!.Nomen.Name),
-            new Endpoint(dstObj.InstanceId, dstParam!.Nomen.Name)));
+        return Success(
+            new Wired(
+                new Endpoint(srcObj.InstanceId, srcParam!.Nomen.Name),
+                new Endpoint(dstObj.InstanceId, dstParam!.Nomen.Name)),
+            removed > 0 ? $"Replaced {removed} source(s) already wired into '{dstParam!.Nomen.Name}'" : null);
     }
 }

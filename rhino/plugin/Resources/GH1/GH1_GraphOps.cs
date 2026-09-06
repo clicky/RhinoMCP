@@ -4,6 +4,27 @@ namespace RhinoAI.Resources;
 
 public static class GH1_GraphOps
 {
+    public static int Connect(IGH_Param src, IGH_Param dst, bool replace)
+    {
+        bool wired = dst.Sources.Contains(src);
+        int removed = 0;
+
+        if (replace)
+        {
+            removed = dst.Sources.Count - (wired ? 1 : 0);
+            if (removed > 0)
+            {
+                dst.RemoveAllSources();
+                wired = false;
+            }
+        }
+
+        if (!wired)
+            dst.AddSource(src);
+
+        return removed;
+    }
+
     public static bool TryResolveOutput(IGH_DocumentObject obj, string selector, out IGH_Param? param, out string error)
     {
         param = null;

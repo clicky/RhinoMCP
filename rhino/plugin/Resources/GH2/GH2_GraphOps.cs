@@ -7,6 +7,24 @@ namespace RhinoAI.Resources;
 
 public static class GH2_GraphOps
 {
+    public static int Connect(IParameter src, IParameter dst, bool replace)
+    {
+        bool wired = dst.Inputs.IndexOf(src.InstanceId) >= 0;
+        int removed = 0;
+
+        if (replace)
+        {
+            removed = dst.Inputs.Count - (wired ? 1 : 0);
+            if (removed > 0)
+                Connections.DisconnectAllInputsExcept(dst, src.InstanceId);
+        }
+
+        if (!wired)
+            Connections.Connect(src, dst);
+
+        return removed;
+    }
+
     public static bool TryResolveOutput(IDocumentObject obj, string selector, out IParameter? param, out string error)
     {
         param = null;

@@ -38,12 +38,14 @@ public static class GH2_ApplyGraphTool
         [Description("Components to place: {Key, Selector, X, Y}. Selector is a Guid (preferred) or component Name.")] ComponentSpec[] components,
         [Description("Wires to create: {SrcKey, Src, DstKey, Dst}. Keys must match a slider or component key above.")] WireSpec[] wires,
         [Description("If true, trigger a new solution at the end.")] bool solve = true,
+        [Description("If true (the default), sources already wired into a destination input before this call are removed first. Wires added within this same call accumulate. Pass false to add alongside everything.")] bool replace = true,
         [Description("Also match obsolete/hidden components by name (a Guid always works). Default false.")] bool includeDeprecated = false)
     {
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return GH2_Failures.NoDocument;
 
         Coercions coerced = new();
+        Rewiring rewiring = new(replace);
         var keyToObj = new Dictionary<string, IDocumentObject>(StringComparer.Ordinal);
         var placed = new List<PlacedRef>();
         var placeErrors = new List<PlaceError>();
@@ -92,7 +94,7 @@ public static class GH2_ApplyGraphTool
         if (wires is not null)
         {
             for (int i = 0; i < wires.Length; i++)
-                wireResults[i] = WireOne(i, wires[i], keyToObj);
+                wireResults[i] = WireOne(i, wires[i], keyToObj, rewiring);
         }
 
         // A solver throw still returns the partial work rather than losing the placing and wiring already done.
@@ -101,6 +103,9 @@ public static class GH2_ApplyGraphTool
 
         int wiresOk = 0;
         for (int i = 0; i < wireResults.Length; i++) if (wireResults[i].Ok) wiresOk++;
+
+        if (rewiring.Guidance is string rewired)
+            coerced.Note(rewired);
 
         return Success(
             new ApplyResult(
@@ -164,7 +169,7 @@ public static class GH2_ApplyGraphTool
     private static string Summarize(IReadOnlyList<ObjectProxy> proxies) =>
         string.Join(", ", proxies.Select(p => $"{p.Id} ({p.Nomen.Chapter}/{p.Nomen.Section})"));
 
-    private static WireResult WireOne(int idx, WireSpec w, Dictionary<string, IDocumentObject> keyToObj)
+    private static WireResult WireOne(int idx, WireSpec w, Dictionary<string, IDocumentObject> keyToObj, Rewiring rewiring)
     {
         if (!keyToObj.TryGetValue(w.SrcKey, out var srcObj))
             return new WireResult(idx, false, $"src_key '{w.SrcKey}' did not match a placed object");
@@ -181,8 +186,7 @@ public static class GH2_ApplyGraphTool
 
         try
         {
-            if (dstParam!.Inputs.IndexOf(srcParam!.InstanceId) < 0)
-                Connections.Connect(srcParam!, dstParam!);
+            rewiring.Note(GH2_GraphOps.Connect(srcParam!, dstParam!, rewiring.ShouldClear(dstParam!.InstanceId)));
         }
         catch (Exception ex)
         {

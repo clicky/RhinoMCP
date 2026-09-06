@@ -17,6 +17,7 @@ public static class GH1_ConnectManyTool
     public static IToolResult ConnectMany(
         RhinoDoc _,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
+        [Description("If true (the default), sources already wired into a destination input before this call are removed first. Wires added within this same call accumulate. Pass false to add alongside everything.")] bool replace = true,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
     {
         if (wires is null || wires.Length == 0)
@@ -30,9 +31,10 @@ public static class GH1_ConnectManyTool
             return GH1_Failures.NoDocument;
 
         WireResult[] results = new WireResult[wires.Length];
+        Rewiring rewiring = new(replace);
 
         for (int i = 0; i < wires.Length; i++)
-            results[i] = WireOne(doc, i, wires[i]);
+            results[i] = WireOne(doc, i, wires[i], rewiring);
 
         if (solve) doc.NewSolution(false);
         GH1_Utils.Redraw();
@@ -40,10 +42,10 @@ public static class GH1_ConnectManyTool
         int okCount = 0;
         for (int i = 0; i < results.Length; i++) if (results[i].Ok) okCount++;
 
-        return Success(new BatchResult(wires.Length, okCount, results));
+        return Success(new BatchResult(wires.Length, okCount, results), rewiring.Guidance);
     }
 
-    private static WireResult WireOne(GH_Document doc, int idx, WireSpec w)
+    private static WireResult WireOne(GH_Document doc, int idx, WireSpec w, Rewiring rewiring)
     {
         if (!Guid.TryParse(w.SrcId, out Guid srcGuid))
             return new WireResult(idx, false, null, null, $"Invalid src_id '{w.SrcId}'");
@@ -65,7 +67,7 @@ public static class GH1_ConnectManyTool
 
         try
         {
-            if (!dstParam!.Sources.Contains(srcParam)) dstParam!.AddSource(srcParam);
+            rewiring.Note(GH1_GraphOps.Connect(srcParam!, dstParam!, rewiring.ShouldClear(dstParam!.InstanceGuid)));
         }
         catch (Exception ex)
         {

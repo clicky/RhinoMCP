@@ -18,6 +18,7 @@ public static class GH1_ConnectTool
         [Description("Output identifier: numeric index, output Name, or output NickName. Use '' or '0' for pure params.")] string src,
         [Description("Guid of the destination IGH_DocumentObject.")] string dst_id,
         [Description("Input identifier: numeric index, input Name, or input NickName. Use '' or '0' for pure params.")] string dst,
+        [Description("If true (the default), any sources already wired into the destination input are removed first, so this becomes its only wire. Pass false to add alongside them.")] bool replace = true,
         [Description("If true, trigger a new solution after wiring. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (!GH1_Utils.TryGetDoc(out GH_Document doc))
@@ -47,17 +48,13 @@ public static class GH1_ConnectTool
         if (!TryResolveInput(dstObj, dst, out IGH_Param? dstParam, out string dstErr))
             return Failure(ToolError.GH_Param_NotFound, dstErr);
 
-        if (dstParam!.Sources.Contains(srcParam))
-        {
-            return Success(new Wired(
-                new Endpoint(srcObj.InstanceGuid, srcParam!.Name),
-                new Endpoint(dstObj.InstanceGuid, dstParam!.Name)));
-        }
-
+        int removed = 0;
         try
         {
-            dstParam!.AddSource(srcParam);
-            if (solve) doc.NewSolution(false);
+            removed = GH1_GraphOps.Connect(srcParam!, dstParam!, replace);
+
+            if (solve)
+                doc.NewSolution(false);
             GH1_Utils.Redraw();
         }
         catch (Exception ex)
@@ -65,9 +62,11 @@ public static class GH1_ConnectTool
             return Failure(ex);
         }
 
-        return Success(new Wired(
-            new Endpoint(srcObj.InstanceGuid, srcParam!.Name),
-            new Endpoint(dstObj.InstanceGuid, dstParam!.Name)));
+        return Success(
+            new Wired(
+                new Endpoint(srcObj.InstanceGuid, srcParam!.Name),
+                new Endpoint(dstObj.InstanceGuid, dstParam!.Name)),
+            removed > 0 ? $"Replaced {removed} source(s) already wired into '{dstParam!.Name}'" : null);
     }
 
     private static bool TryResolveOutput(IGH_DocumentObject obj, string selector, out IGH_Param? param, out string error)
