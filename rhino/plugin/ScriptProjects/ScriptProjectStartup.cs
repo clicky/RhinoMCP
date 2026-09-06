@@ -1,5 +1,7 @@
 using System.IO;
 
+using RhinoAI.Tools;
+
 namespace RhinoAI.ScriptProjects;
 
 // Preview-loaded commands last only for the session, so the previous build is re-previewed once per run.
@@ -28,8 +30,8 @@ internal static class ScriptProjectStartup
 
         try
         {
-            ReturnResult result = ScriptProjectRunner.Reload();
-            if (!result)
+            IToolResult result = ScriptProjectRunner.Reload();
+            if (result.Error is not null)
             {
                 RhinoApp.WriteLine($"Rhino AI could not load your custom commands from the last session");
             }

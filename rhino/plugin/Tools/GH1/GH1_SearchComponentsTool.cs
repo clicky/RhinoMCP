@@ -6,7 +6,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_SearchComponentsTool
+internal static class GH1_SearchComponentsTool
 {
     public readonly record struct ProxyHit(
         Guid Guid,
@@ -20,8 +20,8 @@ public static class GH1_SearchComponentsTool
         bool IsHidden);
 
     [McpServerTool("g1_search_components", "Search GH1 Components", true, false)]
-    [Description("Search the Grasshopper component library by substring. Matches Name, NickName, and Description (case-insensitive). Optional exact-match category/subcategory filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
-    public static string Search(
+    [Description("Search the Grasshopper component library. The query is split into words and every word must appear somewhere in Name, NickName, Description, Category or SubCategory (case-insensitive), so 'XY plane' finds 'World XY'. Exact name matches rank first, then names carrying every word. Optional exact-match category/subcategory filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
+    public static IToolResult Search(
         RhinoDoc _,
         [Description("Substring to match against component Name, NickName, and Description. Case-insensitive.")] string query,
         [Description("Optional exact-match category filter (e.g. 'Maths', 'Params').")] string? category = null,
@@ -29,25 +29,43 @@ public static class GH1_SearchComponentsTool
         [Description("Maximum number of results to return.")] int limit = 20,
         [Description("Include obsolete/hidden components (e.g. legacy scripting). Default false.")] bool includeDeprecated = false)
     {
-        if (string.IsNullOrEmpty(query)) return "query is required";
+        if (string.IsNullOrEmpty(query))
+            return Failure(ToolError.BadArgument, "query is required");
 
-        var hits = new List<ProxyHit>();
+        string[] tokens = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+        List<(int Rank, ProxyHit Hit)> hits = [];
         foreach (IGH_ObjectProxy p in Instances.ComponentServer.ObjectProxies)
         {
-            var d = p.Desc;
+            IGH_InstanceDescription d = p.Desc;
             if (category is not null && !string.Equals(d.Category, category, StringComparison.OrdinalIgnoreCase)) continue;
             if (subcategory is not null && !string.Equals(d.SubCategory, subcategory, StringComparison.OrdinalIgnoreCase)) continue;
             if (!includeDeprecated && GH1_ProxyResolver.IsDeprecated(p)) continue;
 
-            if (!Match(d.Name, query) && !Match(d.NickName, query) && !Match(d.Description, query)) continue;
+            if (!tokens.All(t => Match(d.Name, t) || Match(d.NickName, t) || Match(d.Description, t) || Match(d.Category, t) || Match(d.SubCategory, t)))
+                continue;
 
             string kind = GH1_Utils.ClassifyKind(p.Type);
 
-            hits.Add(new ProxyHit(p.Guid, d.Name, d.NickName, d.Category, d.SubCategory, kind, d.Description, p.Obsolete, p.Exposure == GH_Exposure.hidden));
-            if (hits.Count >= limit) break;
+            hits.Add((
+                Rank(d.Name, query, tokens),
+                new ProxyHit(p.Guid, d.Name, d.NickName, d.Category, d.SubCategory, kind, d.Description, p.Obsolete, p.Exposure == GH_Exposure.hidden)));
         }
 
-        return JsonSerializer.Serialize(hits);
+        return Success(hits
+            .OrderBy(h => h.Rank)
+            .ThenBy(h => h.Hit.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(limit)
+            .Select(h => h.Hit)
+            .ToList());
+    }
+
+    // Broader matching buries the obvious answer, so an exact name wins, then a name carrying every token.
+    private static int Rank(string? name, string query, string[] tokens)
+    {
+        if (string.Equals(name, query, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (tokens.All(t => Match(name, t))) return 1;
+        return 2;
     }
 
     private static bool Match(string? haystack, string needle) =>

@@ -1,13 +1,14 @@
+using Rhino.Display;
 using Rhino.Geometry;
 
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class SetCameraTool
+internal static class SetCameraTool
 {
     [McpServerTool("set_camera", "Set Camera", false, false)]
     [Description("Set the active viewport camera. Any subset of position, target, up vector, lens length, projection, or framing bounding-box may be supplied.")]
-    public static string SetCamera(
+    public static IToolResult SetCamera(
         RhinoDoc doc,
         [Description("Camera position {x,y,z}")] Vector3d? location = null,
         [Description("Camera look-at point {x,y,z}")] Vector3d? target = null,
@@ -17,10 +18,12 @@ public static class SetCameraTool
         [Description("Frame this bounding box (min corner). Pair with boxMax. Applied last so it dominates location/target if both supplied.")] Vector3d? boxMin = null,
         [Description("Frame this bounding box (max corner). Pair with boxMin.")] Vector3d? boxMax = null)
     {
-        var view = doc.Views.ActiveView
-            ?? throw new InvalidOperationException("No active view.");
+        RhinoView? view = doc.Views.ActiveView;
+        if (view is null)
+            return Failure(ToolError.RH_View_NotFound, guidance: "Ask the user to open a viewport");
 
-        var vp = view.ActiveViewport;
+        RhinoViewport vp = view.ActiveViewport;
+        Coercions coerced = new();
 
         if (!string.IsNullOrEmpty(projection))
         {
@@ -29,7 +32,7 @@ public static class SetCameraTool
             else if (projection.Equals("perspective", StringComparison.OrdinalIgnoreCase))
                 vp.ChangeToPerspectiveProjection(true, vp.Camera35mmLensLength > 0 ? vp.Camera35mmLensLength : 50.0);
             else
-                return $"Unknown projection: {projection}";
+                return Failure(ToolError.BadArgument, $"Unknown projection: {projection}", "Use 'parallel' or 'perspective'");
         }
 
         if (location is not null)
@@ -41,20 +44,25 @@ public static class SetCameraTool
         if (up is not null)
             vp.CameraUp = (Vector3d)up;
 
-        if (lensLength.HasValue)
+        if (lensLength.HasValue && lensLength.Value > 0)
             vp.Camera35mmLensLength = lensLength.Value;
+        else if (lensLength.HasValue)
+            coerced.Note($"lensLength {lensLength.Value} is not positive, so it was left unchanged");
+
+        if (boxMin is null != boxMax is null)
+            return Failure(ToolError.BadArgument, "boxMin and boxMax must be supplied together", "Pass both corners, or neither");
 
         if (boxMin is not null && boxMax is not null)
         {
-            var bb = new BoundingBox((Point3d)boxMin, (Point3d)boxMax);
+            BoundingBox bb = new((Point3d)boxMin, (Point3d)boxMax);
             if (bb.IsValid)
                 vp.ZoomBoundingBox(bb);
             else
-                return "boxMin/boxMax do not form a valid bounding box.";
+                return Failure(ToolError.BadArgument, "boxMin/boxMax do not form a valid bounding box.");
         }
 
         view.Redraw();
 
-        return "Camera updated.";
+        return Success(ContentBlock.CreateText("Camera updated."), coerced.Guidance);
     }
 }

@@ -138,7 +138,7 @@ internal sealed class CallToolResult
 // Public so tools that need to return mixed content (e.g. a text message plus
 // an inline image) can yield ContentBlock instances directly. Tools that just
 // return a string never have to touch this type.
-public sealed class ContentBlock
+internal sealed class ContentBlock
 {
     public string Type { get; set; } = "text";
 
@@ -153,6 +153,9 @@ public sealed class ContentBlock
 
     public static ContentBlock CreateText(string text) =>
         new() { Type = "text", Text = text };
+
+    public static ContentBlock CreateJson<V>(V value) =>
+        new() { Type = "text", Text = JsonSerializer.Serialize(value, McpSerializer.Options) };
 
     public static ContentBlock CreateImage(byte[] data, string mimeType) =>
         new() { Type = "image", Data = Convert.ToBase64String(data), MimeType = mimeType };
@@ -309,8 +312,14 @@ internal sealed class LenientIntConverter : JsonConverter<int>
         throw new JsonException($"Cannot convert \"{value}\" to int.");
     }
 
+    // Every int on the tool surface is a count, size or precision, so refusing the whole call over a stray 3.7 loses more than rounding it and saying so.
     private static int FromDecimal(decimal value)
-        => decimal.Truncate(value) == value
-            ? (int)value
-            : throw new JsonException($"Cannot convert non-integer {value} to int.");
+    {
+        if (decimal.Truncate(value) == value)
+            return (int)value;
+
+        int rounded = (int)decimal.Round(value, MidpointRounding.AwayFromZero);
+        BindNotes.Add($"{value.ToString(CultureInfo.InvariantCulture)} was rounded to {rounded}");
+        return rounded;
+    }
 }

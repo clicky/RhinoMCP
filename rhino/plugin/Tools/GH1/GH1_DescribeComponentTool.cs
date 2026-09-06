@@ -6,7 +6,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_DescribeComponentTool
+internal static class GH1_DescribeComponentTool
 {
     public record struct ParamInfo(string Name, string NickName, string Description, string TypeName, string Access, bool Optional);
 
@@ -22,23 +22,32 @@ public static class GH1_DescribeComponentTool
 
     [McpServerTool("g1_describe_component", "Describe GH1 Component", true, false)]
     [Description("Look up a Grasshopper component by name and return its category, description, and input/output parameter list. Useful before placing or wiring components. Ignores obsolete/hidden unless includeDeprecated.")]
-    public static string Describe(
+    public static IToolResult Describe(
         RhinoDoc _,
         [Description("Component name as it appears in the component library (e.g. 'Number Slider', 'Addition'). Case-insensitive.")] string name,
         [Description("Include obsolete/hidden components (e.g. legacy scripting). Default false.")] bool includeDeprecated = false) =>
         GH1_ProxyResolver.Resolve(name, includeDeprecated) switch
         {
             GH1_ProxyResolution.Found found => DescribeProxy(found.Proxy),
-            GH1_ProxyResolution.Ambiguous ambiguous => JsonSerializer.Serialize(new GH1_UnresolvedResult("ambiguous", GH1_ProxyResolver.AmbiguousMessage, GH1_ProxyResolver.ToCandidates(ambiguous.Candidates))),
-            GH1_ProxyResolution.OnlyDeprecated onlyDeprecated => JsonSerializer.Serialize(new GH1_UnresolvedResult("only_deprecated", GH1_ProxyResolver.OnlyDeprecatedMessage, GH1_ProxyResolver.ToCandidates(onlyDeprecated.Candidates))),
-            GH1_ProxyResolution.NotFound => $"No component named '{name}' found",
+            GH1_ProxyResolution.Ambiguous ambiguous => Failure(
+                ToolError.Ambiguous,
+                ContentBlock.CreateJson(GH1_ProxyResolver.ToCandidates(ambiguous.Candidates)),
+                $"'{name}' matches {ambiguous.Candidates.Count} components",
+                GH1_ProxyResolver.AmbiguousMessage),
+            GH1_ProxyResolution.OnlyDeprecated onlyDeprecated => Failure(
+                ToolError.GH_Component_NotFound,
+                ContentBlock.CreateJson(GH1_ProxyResolver.ToCandidates(onlyDeprecated.Candidates)),
+                $"Only obsolete or hidden components match '{name}'",
+                GH1_ProxyResolver.OnlyDeprecatedMessage),
+            GH1_ProxyResolution.NotFound => Failure(ToolError.GH_Component_NotFound, $"No component named '{name}' found", "Find the right name with g1_search_components"),
             _ => throw new InvalidOperationException("Unhandled resolution case"),
         };
 
-    private static string DescribeProxy(IGH_ObjectProxy proxy)
+    private static IToolResult DescribeProxy(IGH_ObjectProxy proxy)
     {
         IGH_DocumentObject obj = proxy.CreateInstance();
-        if (obj is null) return $"Failed to instantiate '{proxy.Desc.Name}'";
+        if (obj is null)
+            return Failure(ToolError.GH_Component_Failed, $"Failed to instantiate '{proxy.Desc.Name}'");
 
         (string kind, ParamInfo[] inputs, ParamInfo[] outputs) = obj switch
         {
@@ -57,7 +66,7 @@ public static class GH1_DescribeComponentTool
             inputs,
             outputs);
 
-        return JsonSerializer.Serialize(info);
+        return Success(info);
     }
 
     private static ParamInfo ToInfo(IGH_Param p) => new(

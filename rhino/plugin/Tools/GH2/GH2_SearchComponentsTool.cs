@@ -6,7 +6,7 @@ using Grasshopper2.UI;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_SearchComponentsTool
+internal static class GH2_SearchComponentsTool
 {
     public readonly record struct ProxyHit(
         Guid Guid,
@@ -19,8 +19,8 @@ public static class GH2_SearchComponentsTool
         bool IsHidden);
 
     [McpServerTool("g2_search_components", "Search GH2 Components", true, false)]
-    [Description("Search the GH2 component library by substring. Matches Name and Info (case-insensitive). Optional exact-match chapter/section filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
-    public static string Search(
+    [Description("Search the GH2 component library. The query is split into words and every word must appear somewhere in Name, Info, Chapter or Section (case-insensitive), so 'XY plane' finds 'World XY'. Exact name matches rank first, then names carrying every word. Optional exact-match chapter/section filters. Excludes obsolete/hidden unless includeDeprecated. Returns up to 'limit' matches.")]
+    public static IToolResult Search(
         RhinoDoc _,
         [Description("Substring to match against component Name and Info. Case-insensitive.")] string query,
         [Description("Optional exact-match chapter filter (e.g. 'Maths', 'Params').")] string? category = null,
@@ -28,25 +28,43 @@ public static class GH2_SearchComponentsTool
         [Description("Maximum number of results to return.")] int limit = 20,
         [Description("Include obsolete/hidden components (e.g. legacy scripting). Default false.")] bool includeDeprecated = false)
     {
-        if (string.IsNullOrEmpty(query)) return "query is required";
+        if (string.IsNullOrEmpty(query))
+            return Failure(ToolError.BadArgument, "query is required");
 
-        var hits = new List<ProxyHit>();
-        foreach (var p in ObjectProxies.Proxies)
+        string[] tokens = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+        List<(int Order, ProxyHit Hit)> hits = [];
+        foreach (ObjectProxy p in ObjectProxies.Proxies)
         {
-            var n = p.Nomen;
+            Nomen n = p.Nomen;
             if (category is not null && !string.Equals(n.Chapter, category, StringComparison.OrdinalIgnoreCase)) continue;
             if (subcategory is not null && !string.Equals(n.Section, subcategory, StringComparison.OrdinalIgnoreCase)) continue;
             if (!includeDeprecated && GH2_ProxyResolver.IsDeprecated(p)) continue;
 
-            if (!Match(n.Name, query) && !Match(n.Info, query)) continue;
+            if (!tokens.All(t => Match(n.Name, t) || Match(n.Info, t) || Match(n.Chapter, t) || Match(n.Section, t)))
+                continue;
 
             string kind = GH2_Utils.ClassifyKind(p.Type);
 
-            hits.Add(new ProxyHit(p.Id, n.Name, n.Chapter, n.Section, kind, n.Info, p.Obsolete, p.Nomen.Rank == Rank.Hidden));
-            if (hits.Count >= limit) break;
+            hits.Add((
+                Order(n.Name, query, tokens),
+                new ProxyHit(p.Id, n.Name, n.Chapter, n.Section, kind, n.Info, p.Obsolete, p.Nomen.Rank == Rank.Hidden)));
         }
 
-        return JsonSerializer.Serialize(hits);
+        return Success(hits
+            .OrderBy(h => h.Order)
+            .ThenBy(h => h.Hit.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(limit)
+            .Select(h => h.Hit)
+            .ToList());
+    }
+
+    // Broader matching buries the obvious answer, so an exact name wins, then a name carrying every token.
+    private static int Order(string? name, string query, string[] tokens)
+    {
+        if (string.Equals(name, query, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (tokens.All(t => Match(name, t))) return 1;
+        return 2;
     }
 
     private static bool Match(string? haystack, string needle) =>

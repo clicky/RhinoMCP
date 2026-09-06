@@ -5,13 +5,17 @@ using Rhino.Geometry;
 using Grasshopper;
 using Grasshopper.Kernel;
 
+#if R9
+using RhinoAI.Resources;
+#endif
+
 namespace RhinoAI.Tools;
 
 // One-shot grounding snapshot: selection + active viewport + doc/Grasshopper
 // summary in a single round-trip, so the agent can orient before acting without
 // chaining get_selection / list_objects / view calls. Pull-only, read-only.
 [McpServerToolType]
-public static class GetContextTool
+internal static partial class GetContextTool
 {
     public sealed record SelectedObject(string Id, string Name, string Layer, string Type);
 
@@ -26,26 +30,28 @@ public static class GetContextTool
 
     public sealed record DocSummary(int ObjectCount, int LayerCount);
 
-    public sealed record GrasshopperSummary(bool CanvasOpen, int ComponentCount, int WireCount);
-
     public sealed record ContextSnapshot(
-        SelectedObject[] Selection,
+        IEnumerable<SelectedObject> Selection,
         ViewportSummary? ActiveViewport,
         DocSummary Document,
-        GrasshopperSummary Grasshopper,
+        IEnumerable<GrasshopperSummary> Grasshopper,
         // Per-section failures, so one throwing section never nukes the snapshot.
         string[]? Warnings);
 
     [McpServerTool("get_context", "Get Context Snapshot", true, false)]
-    [Description("One round-trip grounding snapshot of current state: the active-doc selection (ids/types/layers), the active viewport (name + camera summary), a doc summary (object/layer counts), and a Grasshopper summary (component/wire count if a canvas is open). Read-only; pulls everything you need to orient before acting.")]
-    public static string GetContext(RhinoDoc doc)
+    [Description("One round-trip grounding snapshot of current state: the active-doc selection (ids/types/layers), the active viewport (name + camera summary), a doc summary (object/layer counts), and one Grasshopper summary per version (Version 'GH1' or 'GH2', each with component/wire counts when that canvas is open). Read-only; pulls everything you need to orient before acting, and never opens a canvas that is not already open.")]
+    public static IToolResult GetContext(RhinoDoc doc)
     {
         List<string> warnings = [];
 
         SelectedObject[] selection = Try(() => SelectionOf(doc), [], "selection", warnings);
         ViewportSummary? viewport = Try(() => SummarizeViewport(doc), null, "viewport", warnings);
         DocSummary document = Try(() => SummarizeDocument(doc), new DocSummary(0, 0), "document", warnings);
-        GrasshopperSummary grasshopper = Try(SummarizeGrasshopper, new GrasshopperSummary(false, 0, 0), "grasshopper", warnings);
+        List<GrasshopperSummary> grasshopper =
+        [Try(SummarizeGrasshopper1, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper1", warnings)];
+#if R9
+        grasshopper.Add(SummarizeGrasshopper2());
+#endif
 
         ContextSnapshot snapshot = new(
             selection,
@@ -54,7 +60,7 @@ public static class GetContextTool
             grasshopper,
             warnings.Count == 0 ? null : [.. warnings]);
 
-        return JsonSerializer.Serialize(snapshot, McpSerializer.Options);
+        return Success(snapshot);
     }
 
     // Shared selection projection: also the source of truth for GetSelectionTool's
@@ -127,11 +133,11 @@ public static class GetContextTool
 
     // GH1 only: it is the canvas compiled in every Rhino target (GH2 is R9-only and
     // excluded from this build). A one-line component/wire count, no per-object detail.
-    private static GrasshopperSummary SummarizeGrasshopper()
+    private static GrasshopperSummary SummarizeGrasshopper1()
     {
         GH_Document? ghDoc = Instances.ActiveCanvas?.Document;
         if (ghDoc is null)
-            return new GrasshopperSummary(false, 0, 0);
+            return new GrasshopperSummary("GH1", false, 0, 0);
 
         int components = 0;
         int wires = 0;
@@ -149,8 +155,22 @@ public static class GetContextTool
             }
         }
 
-        return new GrasshopperSummary(true, components, wires);
+        return new GrasshopperSummary("GH1", true, components, wires);
     }
+
+#if R9
+    private static GrasshopperSummary SummarizeGrasshopper2()
+    {
+        try
+        {
+            return Grasshopper2.Summarize();
+        }
+        catch
+        {
+            return new GrasshopperSummary("GH2", false, 0, 0);
+        }
+    }
+#endif
 
     public static double[] XYZ(Point3d p) => [p.X, p.Y, p.Z];
 }

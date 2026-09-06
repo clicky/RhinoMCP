@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 using RhinoAI.Resources;
 
 using Eto.Drawing;
@@ -11,7 +13,7 @@ using Grasshopper2.UI;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_ApplyGraphTool
+internal static class GH2_ApplyGraphTool
 {
     public record struct ComponentSpec(string Key, string Selector, float X, float Y);
     public record struct SliderSpec(string Key, double Min, double Value, double Max, int Decimals, string? Name, float X, float Y);
@@ -20,32 +22,30 @@ public static class GH2_ApplyGraphTool
     public record struct PlacedRef(string Key, Guid Id, string Kind);
     public record struct PlaceError(string Key, string Error);
     public record struct WireResult(int Index, bool Ok, string? Error);
-    public record struct ErrResult(bool Ok, string Error);
 
     public record struct ApplyResult(
         PlacedRef[] Placed,
         PlaceError[] PlaceErrors,
         WireResult[] Wires,
         int WiresOk,
-        bool Solved,
-        string Phase,
-        int Errors,
-        int Warnings,
-        GH2Diagnostic[] Diagnostics);
+        GH2SolveSummary? Solve);
 
     [McpServerTool("g2_apply_graph", "Apply GH2 Graph", false, false)]
     [Description("Place sliders + components and wire them in one call on the active GH2 canvas. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g2_connect'. When solve=true (the default) it also solves at the end and reads the result back, returning the same solve summary as g2_solve_canvas: {Solved, Phase, Errors, Warnings, Diagnostics[]}, where each diagnostic is {Id, Name, Nickname, Level (Remark|Warning|Error|Fault), Message}. Solved is true only when the solution completed with no Error or Fault; read the Diagnostics back to see which components failed and why.")]
-    public static string Apply(
+    public static async Task<IToolResult> Apply(
         RhinoDoc rhDoc,
         [Description("Sliders to place: {Key, Min, Value, Max, Decimals, Name?, X, Y}. Decimals: 0..12.")] SliderSpec[] sliders,
         [Description("Components to place: {Key, Selector, X, Y}. Selector is a Guid (preferred) or component Name.")] ComponentSpec[] components,
         [Description("Wires to create: {SrcKey, Src, DstKey, Dst}. Keys must match a slider or component key above.")] WireSpec[] wires,
         [Description("If true, trigger a new solution at the end.")] bool solve = true,
+        [Description("If true (the default), sources already wired into a destination input before this call are removed first. Wires added within this same call accumulate. Pass false to add alongside everything.")] bool replace = true,
         [Description("Also match obsolete/hidden components by name (a Guid always works). Default false.")] bool includeDeprecated = false)
     {
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return JsonSerializer.Serialize(new ErrResult(false, "Could not get or create GH2 document"));
+            return GH2_Failures.NoDocument;
 
+        Coercions coerced = new();
+        Rewiring rewiring = new(replace);
         var keyToObj = new Dictionary<string, IDocumentObject>(StringComparer.Ordinal);
         var placed = new List<PlacedRef>();
         var placeErrors = new List<PlaceError>();
@@ -59,7 +59,7 @@ public static class GH2_ApplyGraphTool
                 {
                     placeErrors.Add(new PlaceError(s.Key, "duplicate key"));
                 }
-                else if (TryPlaceSlider(doc, s, out var slider, out var err))
+                else if (TryPlaceSlider(doc, s, coerced, out var slider, out var err))
                 {
                     keyToObj[s.Key] = slider!;
                     placed.Add(new PlacedRef(s.Key, slider!.InstanceId, "Slider"));
@@ -94,65 +94,36 @@ public static class GH2_ApplyGraphTool
         if (wires is not null)
         {
             for (int i = 0; i < wires.Length; i++)
-                wireResults[i] = WireOne(i, wires[i], keyToObj);
+                wireResults[i] = WireOne(doc, i, wires[i], keyToObj, rewiring);
         }
 
-        // StartWait (not Start) so the diagnostics we read back reflect the
-        // completed solve, giving the authoring loop the same end-to-end signal in
-        // one call that g2_solve_canvas returns. The placed/wired work has already
-        // happened, so on a solver-infrastructure throw we degrade gracefully:
-        // surface the failure as a Fault diagnostic and still return the partial
-        // work (key->Guid map, per-step results) rather than throwing out of the tool.
-        GH2Diagnostic[] diagnostics = [];
-        bool solved = false;
-        string phase = "Skipped";
-        int errors = 0;
-        int warnings = 0;
-        if (solve)
-        {
-            try
-            {
-                Solution solution = doc.Solution.StartWait();
-                List<GH2Diagnostic> collected = GH2_Diagnostics.Collect(doc);
-                (errors, warnings) = GH2_Diagnostics.Count(collected);
-                diagnostics = collected.ToArray();
-                phase = solution.Phase.ToString();
-                solved = solution.Phase == SolutionPhase.Completed && errors == 0;
-            }
-            catch (Exception ex)
-            {
-                phase = "Faulted";
-                errors = 1;
-                diagnostics = [new GH2Diagnostic(Guid.Empty, "Solution", "", GH2DiagnosticLevel.Fault, ex.Message)];
-            }
-        }
+        // A solver throw still returns the partial work rather than losing the placing and wiring already done.
+        GH2SolveSummary? summary = solve ? await GH2_Diagnostics.SolveAsync(doc) : null;
         GH2_Utils.Redraw();
 
         int wiresOk = 0;
         for (int i = 0; i < wireResults.Length; i++) if (wireResults[i].Ok) wiresOk++;
 
-        return JsonSerializer.Serialize(new ApplyResult(
-            placed.ToArray(),
-            placeErrors.ToArray(),
-            wireResults,
-            wiresOk,
-            solved,
-            phase,
-            errors,
-            warnings,
-            diagnostics));
+        if (rewiring.Guidance is string rewired)
+            coerced.Note(rewired);
+
+        return Success(
+            new ApplyResult(
+                placed.ToArray(),
+                placeErrors.ToArray(),
+                wireResults,
+                wiresOk,
+                summary),
+            coerced.Guidance);
     }
 
-    private static bool TryPlaceSlider(Document doc, SliderSpec s, out NumberSliderObject? slider, out string error)
+    private static bool TryPlaceSlider(Document doc, SliderSpec s, Coercions coerced, out NumberSliderObject? slider, out string error)
     {
         slider = null;
-        if (s.Decimals < 0 || s.Decimals > 12)
-        {
-            error = $"Invalid decimals '{s.Decimals}'. Valid range: 0..12.";
-            return false;
-        }
+        int decimals = coerced.Clamp($"slider '{s.Key}' decimals", s.Decimals, 0, 12);
+        (double min, double value, double max) = coerced.SliderRange(s.Min, s.Value, s.Max);
 
-        var number = new UiNumber(s.Decimals, (decimal)s.Value, (decimal)s.Min, (decimal)s.Max);
+        var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);
         slider = new NumberSliderObject(string.IsNullOrEmpty(s.Name) ? "num" : s.Name!, number);
         doc.Objects.Add(slider, new PointF(s.X, s.Y));
         error = "";
@@ -198,12 +169,15 @@ public static class GH2_ApplyGraphTool
     private static string Summarize(IReadOnlyList<ObjectProxy> proxies) =>
         string.Join(", ", proxies.Select(p => $"{p.Id} ({p.Nomen.Chapter}/{p.Nomen.Section})"));
 
-    private static WireResult WireOne(int idx, WireSpec w, Dictionary<string, IDocumentObject> keyToObj)
+    private static WireResult WireOne(Document doc, int idx, WireSpec w, Dictionary<string, IDocumentObject> keyToObj, Rewiring rewiring)
     {
         if (!keyToObj.TryGetValue(w.SrcKey, out var srcObj))
             return new WireResult(idx, false, $"src_key '{w.SrcKey}' did not match a placed object");
         if (!keyToObj.TryGetValue(w.DstKey, out var dstObj))
             return new WireResult(idx, false, $"dst_key '{w.DstKey}' did not match a placed object");
+
+        if (GH2_GraphOps.WouldCycle(doc, srcObj, dstObj))
+            return new WireResult(idx, false, $"wiring key '{w.SrcKey}' into '{w.DstKey}' would create a cycle");
 
         if (!GH2_GraphOps.TryResolveOutput(srcObj, w.Src, out IParameter? srcParam, out string srcErr))
             return new WireResult(idx, false, srcErr);
@@ -212,8 +186,7 @@ public static class GH2_ApplyGraphTool
 
         try
         {
-            if (dstParam!.Inputs.IndexOf(srcParam!.InstanceId) < 0)
-                Connections.Connect(srcParam!, dstParam!);
+            rewiring.Note(GH2_GraphOps.Connect(srcParam!, dstParam!, rewiring.ShouldClear(dstParam!.InstanceId)));
         }
         catch (Exception ex)
         {

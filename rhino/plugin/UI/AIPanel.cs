@@ -19,9 +19,9 @@ namespace RhinoAI;
 // Every action the user takes arrives as a PanelCommand and is routed to the same AgentHost /
 // AgentDispatch entry points the Eto panel uses, so there is no second code path for behaviour.
 [Guid("fb948c98-5987-45a3-8dcb-2814ed77ee3b")]
-public class AIPAnel : Panel
+internal class AIPanel : Panel
 {
-    public static Guid PanelId => typeof(AIPAnel).GUID;
+    public static Guid PanelId => typeof(AIPanel).GUID;
 
     private const string PageResource = "RhinoAI.panel.html";
 
@@ -44,12 +44,12 @@ public class AIPAnel : Panel
 
     internal Action<Conversation> PersistConversationHook { get; set; } = ConversationStore.Save;
 
-    public AIPAnel()
+    public AIPanel()
         : this(RhinoDoc.ActiveDoc is { } doc ? doc.RuntimeSerialNumber : 0u)
     {
     }
 
-    public AIPAnel(uint documentSerialNumber)
+    public AIPanel(uint documentSerialNumber)
     {
         DocSerial = documentSerialNumber;
         Bridge = new PanelBridge(View, Handle);
@@ -171,7 +171,7 @@ public class AIPAnel : Panel
         Bridge.Reset();
         // The page about to load knows no tokens, so the next send must not be suppressed.
         LastTheme = string.Empty;
-        Assembly assembly = typeof(AIPAnel).Assembly;
+        Assembly assembly = typeof(AIPanel).Assembly;
         using Stream? page = assembly.GetManifestResourceStream(PageResource);
         if (page is null)
         {

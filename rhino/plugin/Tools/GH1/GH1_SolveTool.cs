@@ -6,23 +6,25 @@ using Rhino.Geometry;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_SolveTool
+internal static class GH1_SolveTool
 {
+
     [McpServerTool("g1_solve_graph", "Solve GH1 Graph", false, false)]
     [Description("Solves the active GH canvas. zoom_views controls whether Rhino viewports zoom to the new preview: true=always, false=never, null=auto (zoom only when nothing was previewed before the solve).")]
-    public static string Solve(
+    public static IToolResult Solve(
         RhinoDoc rhinoDoc,
         [Description("Auto-zoom every Rhino viewport to the GH preview after solving. true=always, false=never, null=zoom only when nothing was visible pre-solve.")] bool? zoom_views = null)
     {
-        if (!GH1_Utils.TryGetOrCreateDoc(rhinoDoc, out GH_Document ghDoc)) return "Could not get GHDoc";
+        if (!GH1_Utils.TryGetOrCreateDoc(rhinoDoc, out GH_Document ghDoc))
+            return GH1_Failures.NoDocument;
 
         int activeCount = ghDoc.ActiveObjects().Count;
         if (activeCount <= 0)
         {
-            return "No Active Objects";
+            return Failure(ToolError.GH_Canvas_Empty, "No Active Objects");
         }
 
-        var preBbox = GetPreviewBoundingBox(ghDoc);
+        BoundingBox preBbox = GetPreviewBoundingBox(ghDoc);
         bool wasPreviewVisible = preBbox.IsValid && preBbox.Diagonal.Length > 0;
 
         try
@@ -30,22 +32,24 @@ public static class GH1_SolveTool
             ghDoc.NewSolution(true);
 
             bool shouldZoom = zoom_views ?? !wasPreviewVisible;
-            if (shouldZoom) ZoomViewsToPreview(rhinoDoc, ghDoc);
+            if (shouldZoom)
+                ZoomViewsToPreview(rhinoDoc, ghDoc);
         }
         catch (Exception ex)
         {
-            return ex.Message;
+            return Failure(ex);
         }
 
-        var statuses = GH1_Utils.GetCanvasStatus(ghDoc);
-        if (statuses.Count == 0)
-        {
-            return "Success";
-        }
+        GH1_Utils.SolveSummary result = GH1_Utils.Summarize(ghDoc);
 
-        string errMsg = "Solution encountered some errors";
+        if (result.Solved)
+            return Success(result);
 
-        return JsonSerializer.Serialize(new { errMsg, statuses });
+        return Failure(
+            ToolError.GH_Solution_Failed,
+            ContentBlock.CreateJson(result),
+            "The solution reported component errors",
+            "Read the statuses to see which components failed and why");
     }
 
     private static BoundingBox GetPreviewBoundingBox(GH_Document doc)

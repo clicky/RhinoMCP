@@ -10,7 +10,7 @@ using Grasshopper.Kernel.Types;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_GetCanvasGraphTool
+internal static class GH1_GetCanvasGraphTool
 {
     public record struct Message(string Level, string Text);
     public record struct Endpoint(Guid Id, string Param);
@@ -34,16 +34,16 @@ public static class GH1_GetCanvasGraphTool
 
     [McpServerTool("g1_get_canvas_graph", "Get GH1 Canvas Graph", true, false)]
     [Description("Return a structured snapshot of the active GH1 canvas: objects (with messages, inputs/outputs and optional volatile data summaries) and wires between them.")]
-    public static string GetGraph(
+    public static IToolResult GetGraph(
         RhinoDoc _,
         [Description("Include per-param volatile data summaries (branches/items/sample).")] bool include_data = true,
         [Description("How many items to include in each data sample.")] int sample_size = 3)
     {
         if (!GH1_Utils.TryGetDoc(out GH_Document doc))
-            return "Could not get GH document";
+            return GH1_Failures.NoDocument;
 
-        var objects = new List<ObjectInfo>();
-        var wires = new List<Wire>();
+        List<ObjectInfo> objects =[];
+        List<Wire> wires = [];
 
         foreach (var obj in doc.Objects)
         {
@@ -85,7 +85,7 @@ public static class GH1_GetCanvasGraphTool
                 outputs));
         }
 
-        return JsonSerializer.Serialize(new Graph(objects.ToArray(), wires.ToArray()));
+        return Success(new Graph(objects.ToArray(), wires.ToArray()));
     }
 
     private static Message[] CollectMessages(IGH_DocumentObject obj)

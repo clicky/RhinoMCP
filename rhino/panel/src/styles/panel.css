@@ -586,7 +586,16 @@ a:hover { text-decoration: underline; }
   background: var(--bg);
 }
 .tool-section { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.tool-section > h4 {
+.tool-section-head { display: flex; align-items: center; gap: 6px; }
+.tool-copy {
+  margin-inline-start: auto;
+  display: inline-flex;
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+  color: var(--text-faint);
+}
+.tool-copy:hover { background: var(--surface-3); color: var(--text); }
+.tool-section h4 {
   margin: 0;
   font: 500 var(--fs-xs)/1 var(--mono);
   letter-spacing: .05em;

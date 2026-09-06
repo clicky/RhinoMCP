@@ -35,7 +35,7 @@ internal static class ConversationStore
                 Node.SetString(dto.SessionId, JsonSerializer.Serialize(dto, McpSerializer.Options));
                 Prune();
             }
-        }), null);
+        }));
     }
 
     // Drop one transcript.
@@ -63,7 +63,7 @@ internal static class ConversationStore
                     return;
                 }
             }
-        }), null);
+        }));
     }
 
     // Recents first (newest StartedAt). Corrupt slots are skipped, never thrown.

@@ -7,7 +7,7 @@ using Rhino.FileIO;
 
 namespace RhinoAI;
 
-public static class RhinoAIHost
+internal static class RhinoAIHost
 {
 
     private static Dictionary<uint, McpServer> Servers { get; } = new();
@@ -186,7 +186,7 @@ public static class RhinoAIHost
                 if (server.HasStarted)
                     WriteAnnouncement(server.Port);
             }
-        }), null);
+        }));
     }
 
     // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router

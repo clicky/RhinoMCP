@@ -5,40 +5,52 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_ConnectManyTool
+internal static class GH1_ConnectManyTool
 {
     public record struct WireSpec(string SrcId, string Src, string DstId, string Dst);
     public record struct Endpoint(Guid Id, string Param);
     public record struct WireResult(int Index, bool Ok, Endpoint? Src, Endpoint? Dst, string? Error);
-    public record struct BatchResult(int Count, int OkCount, WireResult[] Wires);
+    public record struct BatchResult(int Count, int OkCount, WireResult[] Wires, GH1_Utils.SolveSummary? Solve);
 
     [McpServerTool("g1_connect_many", "Connect GH1 Wires (Batch)", false, false)]
     [Description("Wire multiple output→input connections in one call. Same selector semantics as 'g1_connect' (numeric index or Name/NickName; '' or '0' for pure params). A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
-    public static string ConnectMany(
+    public static IToolResult ConnectMany(
         RhinoDoc _,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
+        [Description("If true (the default), sources already wired into a destination input before this call are removed first. Wires added within this same call accumulate. Pass false to add alongside everything.")] bool replace = true,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
     {
-        if (wires is null || wires.Length == 0) return JsonSerializer.Serialize(new BatchResult(0, 0, Array.Empty<WireResult>()));
+        if (wires is null || wires.Length == 0)
+            return Failure(
+                ToolError.BadArgument,
+                ContentBlock.CreateJson(new BatchResult(0, 0, [], null)),
+                "No wires were supplied",
+                "Pass at least one {SrcId, Src, DstId, Dst} entry");
 
         if (!GH1_Utils.TryGetDoc(out GH_Document doc))
-            return "No active GH document";
+            return GH1_Failures.NoDocument;
 
-        var results = new WireResult[wires.Length];
+        WireResult[] results = new WireResult[wires.Length];
+        Rewiring rewiring = new(replace);
 
         for (int i = 0; i < wires.Length; i++)
-            results[i] = WireOne(doc, i, wires[i]);
+            results[i] = WireOne(doc, i, wires[i], rewiring);
 
-        if (solve) doc.NewSolution(false);
+        GH1_Utils.SolveSummary? summary = null;
+        if (solve)
+        {
+            doc.NewSolution(false);
+            summary = GH1_Utils.Summarize(doc);
+        }
         GH1_Utils.Redraw();
 
         int okCount = 0;
         for (int i = 0; i < results.Length; i++) if (results[i].Ok) okCount++;
 
-        return JsonSerializer.Serialize(new BatchResult(wires.Length, okCount, results));
+        return Success(new BatchResult(wires.Length, okCount, results, summary), rewiring.Guidance);
     }
 
-    private static WireResult WireOne(GH_Document doc, int idx, WireSpec w)
+    private static WireResult WireOne(GH_Document doc, int idx, WireSpec w, Rewiring rewiring)
     {
         if (!Guid.TryParse(w.SrcId, out Guid srcGuid))
             return new WireResult(idx, false, null, null, $"Invalid src_id '{w.SrcId}'");
@@ -50,6 +62,9 @@ public static class GH1_ConnectManyTool
         var dstObj = doc.FindObject(dstGuid, true);
         if (dstObj is null) return new WireResult(idx, false, null, null, $"Destination '{dstGuid}' not found");
 
+        if (GH1_GraphOps.WouldCycle(srcObj, dstObj))
+            return new WireResult(idx, false, null, null, $"Wiring '{srcGuid}' into '{dstGuid}' would create a cycle");
+
         if (!GH1_GraphOps.TryResolveOutput(srcObj, w.Src, out IGH_Param? srcParam, out string srcErr))
             return new WireResult(idx, false, null, null, srcErr);
         if (!GH1_GraphOps.TryResolveInput(dstObj, w.Dst, out IGH_Param? dstParam, out string dstErr))
@@ -57,7 +72,7 @@ public static class GH1_ConnectManyTool
 
         try
         {
-            if (!dstParam!.Sources.Contains(srcParam)) dstParam!.AddSource(srcParam);
+            rewiring.Note(GH1_GraphOps.Connect(srcParam!, dstParam!, rewiring.ShouldClear(dstParam!.InstanceGuid)));
         }
         catch (Exception ex)
         {

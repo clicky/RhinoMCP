@@ -4,7 +4,7 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoAI.Resources;
 
-public static class GH1_Utils
+internal static class GH1_Utils
 {
 
   public static bool TryGetOrCreateDoc(RhinoDoc rhDoc, out GH_Document doc)
@@ -49,6 +49,14 @@ public static class GH1_Utils
 
   public record struct Message(string Level, string Text);
   public record struct ComponentStatus(string Name, Message[] Messages);
+
+  public record struct SolveSummary(bool Solved, int Objects, int Reported, ComponentStatus[] Statuses);
+
+  public static SolveSummary Summarize(GH_Document ghDoc)
+  {
+    List<ComponentStatus> statuses = GetCanvasStatus(ghDoc);
+    return new SolveSummary(statuses.Count == 0, ghDoc.ActiveObjects().Count, statuses.Count, statuses.ToArray());
+  }
 
   public static List<ComponentStatus> GetCanvasStatus(GH_Document ghDoc)
   {

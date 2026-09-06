@@ -1,5 +1,7 @@
 using System.IO;
 
+using RhinoAI.Tools;
+
 namespace RhinoAI.ScriptProjects;
 
 internal class RhinoAppProjectRunner : IProjectRunner
@@ -14,19 +16,19 @@ internal class RhinoAppProjectRunner : IProjectRunner
 
     private const string NOT_AVAILABLE = "Feature not available in this build";
 
-    public ReturnResult AddCommandToProject(string commandName, string script, string? svg)
+    public IToolResult AddCommandToProject(string commandName, string script, string? svg)
     {
-        return ReturnResult.Failure(NOT_AVAILABLE);
+        return Failure(ToolError.Unsupported, NOT_AVAILABLE);
     }
 
-    public ReturnResult RemoveCommandFromProject(string commandName)
+    public IToolResult RemoveCommandFromProject(string commandName)
     {
-        return ReturnResult.Failure(NOT_AVAILABLE);
+        return Failure(ToolError.Unsupported, NOT_AVAILABLE);
     }
 
-    public ReturnResult Build(bool reloadOnly)
+    public IToolResult Build(bool reloadOnly)
     {
-        return ReturnResult.Failure(NOT_AVAILABLE);
+        return Failure(ToolError.Unsupported, NOT_AVAILABLE);
     }
 
 }

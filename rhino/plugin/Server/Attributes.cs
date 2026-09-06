@@ -6,10 +6,10 @@ namespace RhinoAI.Server;
 // Only GlobalUsings.cs swaps which namespace the symbol resolves from.
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class McpServerToolTypeAttribute : Attribute { }
+internal sealed class McpServerToolTypeAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-public sealed class McpServerToolAttribute(string name, string? title = null, bool readOnly = false, bool destructive = false) : Attribute
+internal sealed class McpServerToolAttribute(string name, string? title = null, bool readOnly = false, bool destructive = false) : Attribute
 {
     public string? Name { get; } = name;
     public string? Title { get; } = title;
@@ -21,10 +21,10 @@ public sealed class McpServerToolAttribute(string name, string? title = null, bo
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class McpServerResourceTypeAttribute : Attribute { }
+internal sealed class McpServerResourceTypeAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-public sealed class McpServerResourceAttribute : Attribute
+internal sealed class McpServerResourceAttribute : Attribute
 {
     public string? UriTemplate { get; set; }
     public string? Name { get; set; }

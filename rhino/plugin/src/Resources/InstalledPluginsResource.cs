@@ -3,7 +3,7 @@ using Rhino.PlugIns;
 namespace RhinoAI.Resources;
 
 [McpServerResourceType]
-public static class InstalledPluginsResource
+internal static class InstalledPluginsResource
 {
     // TODO : Can GH be a flag or a separate endpoint?
 

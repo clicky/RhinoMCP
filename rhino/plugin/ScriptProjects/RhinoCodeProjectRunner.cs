@@ -9,6 +9,8 @@ using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
 using Rhino.Runtime.Code.Diagnostics;
 
+using RhinoAI.Tools;
+
 namespace RhinoAI.ScriptProjects;
 
 internal class RhinoCodeProjectRunner : IProjectRunner
@@ -26,7 +28,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         Paths.Directory.EnsureDirectory();
     }
 
-    private ReturnResult TryGetProject(out IProject project)
+    private IToolResult TryGetProject(out IProject project)
     {
         project = default!;
 
@@ -47,7 +49,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
                         .FirstOrDefault();
 
                 if (server is null)
-                    return ReturnResult.Failure("Could not get Project");
+                    return Failure(ToolError.Failed, "Could not get Project");
 
                 // Identity and settings
                 project = server.CreateProject();
@@ -75,8 +77,8 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
         return project switch
         {
-            null => ReturnResult.Failure("Could not create Project", "Report issue to developer"),
-            _ => ReturnResult.Success(),
+            null => Failure(ToolError.Failed, "Could not create Project", "Report issue to developer"),
+            _ => Success(),
         };
     }
 
@@ -95,12 +97,12 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         return PublisherIdentity.Empty;
     }
 
-    public ReturnResult AddCommandToProject(string commandName, string script, string? svg)
+    public IToolResult AddCommandToProject(string commandName, string script, string? svg)
     {
         try
         {
-            ReturnResult result = TryGetProject(out IProject project);
-            if (!result)
+            IToolResult result = TryGetProject(out IProject project);
+            if (result.Error is not null)
                 return result;
 
             Uri scriptUri = new(Path.Combine(Paths.Directory, $"{commandName}.py"));
@@ -110,7 +112,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
             SourceCode validate = new(LanguageSpec.Python3, script);
 
             if (!validate.TryCreateCode(out Code code))
-                return ReturnResult.Failure("Could not create code from script");
+                return Failure(ToolError.BadArgument, "Could not create code from script");
 
             if (!code.TryBuild(new BuildContext(BuildKind.Run), out CompileException ex))
             {
@@ -128,7 +130,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
                     guidance = $"STACK TRACE : {ex.StackTrace}";
                 }
 
-                return ReturnResult.Failure(message, guidance);
+                return Failure(ToolError.BadArgument, message, guidance);
             }
 
             File.WriteAllText(scriptUri.LocalPath, script);
@@ -141,15 +143,16 @@ internal class RhinoCodeProjectRunner : IProjectRunner
             ProjectCode projectCode = project.Add(source);
             RhinoCodeProjects.SetIcon(projectCode, svg);
 
-            if (!project.TryStore()) return ReturnResult.Failure($"Could not save script {scriptUri.LocalPath}");
+            if (!project.TryStore())
+                return Failure(ToolError.RH_Write_Failed, $"Could not save script {scriptUri.LocalPath}");
 
             Reload();
 
-            return ReturnResult.Success();
+            return Success();
         }
         catch (Exception anyEx)
         {
-            return ReturnResult.Failure(anyEx.Message);
+            return Failure(anyEx);
         }
     }
 
@@ -161,46 +164,51 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         script = script.Insert(0, HEADER);
     }
 
-    public ReturnResult RemoveCommandFromProject(string commandName)
+    public IToolResult RemoveCommandFromProject(string commandName)
     {
         try
         {
-            ReturnResult result = TryGetProject(out IProject project);
-            if (!result)
+            IToolResult result = TryGetProject(out IProject project);
+            if (result.Error is not null)
                 return result;
 
+            bool removed = false;
             foreach (ICode code in project.GetCodes())
             {
                 if (!string.Equals(code.Title, commandName, StringComparison.OrdinalIgnoreCase))
                     continue;
                 project.Remove(code.Id);
                 project.Store();
+                removed = true;
 
                 break;
             }
+
+            if (!removed)
+                return Failure(ToolError.RH_Command_NotFound, $"No command named '{commandName}' is in the project");
 
             Reload();
         }
         catch (Exception anyEx)
         {
-            return ReturnResult.Failure(anyEx.Message);
+            return Failure(anyEx);
         }
 
-        return ReturnResult.Success();
+        return Success();
     }
 
-    public ReturnResult Build(bool reloadOnly)
+    public IToolResult Build(bool reloadOnly)
     {
         ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
         try
         {
-            ReturnResult result = TryGetProject(out IProject project);
-            if (!result)
+            IToolResult result = TryGetProject(out IProject project);
+            if (result.Error is not null)
                 return result;
 
             dynamic? host = ScriptingEnvironment.Host;
             if (host is null)
-                return ReturnResult.Failure("Could not resolve the script host");
+                return Failure(ToolError.Failed, "Could not resolve the script host");
 
             ProjectPackageBuild build = project.Settings.PackageBuild;
 
@@ -211,13 +219,13 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         }
         catch (Exception anyEx)
         {
-            return ReturnResult.Failure(anyEx.Message);
+            return Failure(anyEx);
         }
 
-        return ReturnResult.Success();
+        return Success();
     }
 
-    public ReturnResult Reload() => Build(false);
+    public IToolResult Reload() => Build(false);
 
 }
 

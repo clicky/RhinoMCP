@@ -113,7 +113,7 @@ internal static class AgentDispatch
             }
 
             TryDispatch(doc, message, asAnswer: true, announceBusy: false);
-        }), null);
+        }));
 
     // The shared acquire-or-reject path behind both a fresh prompt and an answer flush. Resolves the
     // agent + listener, then makes the gate decision and the pending-slot bookkeeping in ONE critical

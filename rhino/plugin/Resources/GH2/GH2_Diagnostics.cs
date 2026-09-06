@@ -1,11 +1,13 @@
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Grasshopper2.Doc;
 
 namespace RhinoAI.Resources;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum GH2DiagnosticLevel
+internal enum GH2DiagnosticLevel
 {
     Remark,
     Warning,
@@ -13,30 +15,49 @@ public enum GH2DiagnosticLevel
     Fault,
 }
 
-public sealed record GH2Diagnostic(Guid Id, string Name, string Nickname, GH2DiagnosticLevel Level, string Message);
+internal sealed record GH2Diagnostic(Guid Id, string Name, string Nickname, GH2DiagnosticLevel Level, string Message);
 
-public static class GH2_Diagnostics
+internal sealed record GH2SolveSummary(bool Solved, int Objects, string Phase, int Errors, int Warnings, GH2Diagnostic[] Diagnostics);
+
+internal static class GH2_Diagnostics
 {
-    // The post-solve diagnostic surface lives on IDocumentObject.State, which is
-    // an ObjectSolutionState (always present, never null). Three distinct sources
-    // matter and the old code only read the first:
-    //   1. State.Data.Messages    - the per-object Messages collection (Remark/
-    //      Warning/Error). Messages is not IEnumerable; it exposes Count + an
-    //      indexer + WorstMessageLevel, hence the index loop below.
-    //   2. State.Phase == Faulted - a component that threw during Compute records
-    //      no Message; the only signal is the Faulted phase plus FaultException.
-    //      Without this branch a hard component crash reads back as "solved, no
-    //      messages", which is exactly the case the self-correct loop must catch.
-    //      A faulted object keeps its PREVIOUS solve's Data (Fault() carries the
-    //      old Data, not the exception), so we report only the fault and skip its
-    //      stale Messages, otherwise old remarks/warnings bleed into the report.
-    //   3. State.Phase == Cancelled - when one object faults, the scheduler cancels
-    //      the document solution token and every still-pending object throws
-    //      OperationCanceledException, landing in Cancelled with stale Data and
-    //      never recomputed. Without this branch all downstream components that
-    //      never ran are silently dropped, so a multi-fault solve under-reports
-    //      and the loop wrongly declares partial success. Surface them as Errors so
-    //      the count reflects actual state and the caller keeps iterating.
+
+    public static TimeSpan SolveTimeout { get; } = TimeSpan.FromSeconds(60);
+
+    public static async Task<GH2SolveSummary> SolveAsync(Document ghDoc)
+    {
+        using CancellationTokenSource source = new(SolveTimeout);
+
+        Solution? solution = null;
+        try
+        {
+            solution = await ghDoc.Solution.Start(source, SolutionMode.Regular).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return Faulted(ghDoc, "Cancelled", $"The solution did not finish within {SolveTimeout.TotalSeconds:F0} seconds and was cancelled");
+        }
+        catch (Exception ex)
+        {
+            return Faulted(ghDoc, "Faulted", ex.Message);
+        }
+
+        List<GH2Diagnostic> collected = Collect(ghDoc);
+        (int errors, int warnings) = Count(collected);
+
+        return new GH2SolveSummary(
+            errors == 0,
+            ghDoc.Objects.Count,
+            "Completed",
+            errors,
+            warnings,
+            collected.ToArray());
+    }
+
+    private static GH2SolveSummary Faulted(Document ghDoc, string phase, string message) =>
+        new(false, ghDoc.Objects.Count, phase, 1, 0,
+            [new GH2Diagnostic(Guid.Empty, "Solution", "", GH2DiagnosticLevel.Fault, message)]);
+
     public static List<GH2Diagnostic> Collect(Document ghDoc)
     {
         List<GH2Diagnostic> diagnostics = [];
@@ -60,13 +81,15 @@ public static class GH2_Diagnostics
             }
 
             SolutionData? data = state.Data;
-            if (data is null) continue;
+            if (data is null)
+                continue;
 
             Messages messages = data.Messages;
             for (int i = 0; i < messages.Count; i++)
             {
                 Message m = messages[i];
-                if (!TryMapLevel(m.Level, out GH2DiagnosticLevel level)) continue;
+                if (!TryMapLevel(m.Level, out GH2DiagnosticLevel level))
+                    continue;
                 diagnostics.Add(MakeDiagnostic(obj, level, m.Text));
             }
         }
@@ -82,8 +105,10 @@ public static class GH2_Diagnostics
         int warnings = 0;
         foreach (GH2Diagnostic d in diagnostics)
         {
-            if (d.Level is GH2DiagnosticLevel.Error or GH2DiagnosticLevel.Fault) errors++;
-            else if (d.Level is GH2DiagnosticLevel.Warning) warnings++;
+            if (d.Level is GH2DiagnosticLevel.Error or GH2DiagnosticLevel.Fault)
+                errors++;
+            else if (d.Level is GH2DiagnosticLevel.Warning)
+                warnings++;
         }
         return (errors, warnings);
     }
@@ -95,10 +120,18 @@ public static class GH2_Diagnostics
     {
         switch (level)
         {
-            case MessageLevel.Remark: mapped = GH2DiagnosticLevel.Remark; return true;
-            case MessageLevel.Warning: mapped = GH2DiagnosticLevel.Warning; return true;
-            case MessageLevel.Error: mapped = GH2DiagnosticLevel.Error; return true;
-            default: mapped = GH2DiagnosticLevel.Remark; return false;
+            case MessageLevel.Remark:
+                mapped = GH2DiagnosticLevel.Remark;
+                return true;
+            case MessageLevel.Warning:
+                mapped = GH2DiagnosticLevel.Warning;
+                return true;
+            case MessageLevel.Error:
+                mapped = GH2DiagnosticLevel.Error;
+                return true;
+            default:
+                mapped = GH2DiagnosticLevel.Remark;
+                return false;
         }
     }
 }
