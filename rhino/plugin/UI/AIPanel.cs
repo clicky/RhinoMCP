@@ -19,7 +19,7 @@ namespace RhinoAI;
 // Every action the user takes arrives as a PanelCommand and is routed to the same AgentHost /
 // AgentDispatch entry points the Eto panel uses, so there is no second code path for behaviour.
 [Guid("fb948c98-5987-45a3-8dcb-2814ed77ee3b")]
-internal class AIPanel : Panel
+public class AIPanel : Panel
 {
     public static Guid PanelId => typeof(AIPanel).GUID;
 
