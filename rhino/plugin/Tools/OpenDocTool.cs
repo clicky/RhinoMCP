@@ -19,19 +19,28 @@ internal static class OpenDocTool
         if (!System.IO.File.Exists(path))
             return Failure(ToolError.RH_File_NotFound, $"File not found: {path}");
 
-        int cleared = 0;
+        List<RhinoObject> removables = new(doc.Objects.Count);
         if (clearFirst)
         {
             foreach (RhinoObject? obj in doc.Objects)
             {
                 if (obj is null) continue;
-                if (doc.Objects.Delete(obj.Id, true)) cleared++;
+                removables.Add(obj);
             }
         }
 
         int before = doc.Objects.Count;
         if (!doc.Import(path))
             return Failure(ToolError.Failed, $"Failed to import: {path}");
+
+        foreach(RhinoObject obj in removables)
+        {
+            doc.Objects.Delete(obj.Id, true);
+        }
+
+        // TODO : Non 3dm files will offer options and so get stuck!
+        // RhinoApp.RunScript(doc.RuntimeSerialNumber, "!_E nter", false);
+
         int imported = doc.Objects.Count - before;
 
         foreach (RhinoView? view in doc.Views)
@@ -40,13 +49,13 @@ internal static class OpenDocTool
             view.ActiveViewport?.ZoomExtents();
         }
 
-        doc.Views.Redraw(true);
+        doc.Views.Redraw();
 
         return Success(new
         {
             path,
             imported,
-            cleared,
+            removables.Count,
         });
     }
 }
