@@ -18,13 +18,29 @@ internal static class RhinoAIHost
     // Re-advertise live listeners on this interval. Lets a spuriously-reaped slot 
     // re-adopt on its own instead of staying gone until the user re-runs MCPStart. 
     // Re-dropping a already-adopted listener is a no-op.
-    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
+    private static TimeSpan HeartbeatInterval { get; } = TimeSpan.FromSeconds(15);
 
     private static void OpenServer(object? sender, DocumentOpenEventArgs e)
     {
-        // Not a new file
-        if (e.Merge) return;
-        if (e.Reference) return;
+        if (e.Merge)
+            return;
+
+        if (e.Reference)
+            return;
+
+        OpenNewServer(sender, e);
+    }
+
+    private static void OpenNewServer(object? sender, DocumentEventArgs e)
+    {
+        if (e.Document is null)
+            return;
+
+        if (Servers.TryGetValue(e.Document.RuntimeSerialNumber, out McpServer? server) && server is not null)
+        {
+            if (server.HasStarted)
+                return;
+        }
 
         if (TryGetNextPort(out int port))
         {
@@ -42,11 +58,13 @@ internal static class RhinoAIHost
     {
         if (!Servers.Remove(e.DocumentSerialNumber, out McpServer? server))
             return;
+
         if (server is not null)
         {
             WriteDeparture(server.Port);
             server.Stop();
         }
+
         StopHeartbeatIfIdle();
     }
 
@@ -323,7 +341,8 @@ internal static class RhinoAIHost
     internal static void RegisterDocumentWatcher()
     {
         RhinoDoc.CloseDocument += CloseServer;
-        RhinoDoc.BeginOpenDocument += OpenServer;
+        RhinoDoc.NewDocument += OpenNewServer;
+        RhinoDoc.EndOpenDocument += OpenServer;
     }
 
 }

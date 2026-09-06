@@ -54,9 +54,18 @@ public class RhinoAIPlugin : PlugIn
         AgentHost.Shutdown();
     }
 
+    private void RegisterOpen(object? sender, DocumentOpenEventArgs e)
+    {
+        if (e.Merge) return;
+        if (e.Reference) return;
+        Register(sender, e);
+    }
+
     private void Register(object? sender, DocumentEventArgs e)
     {   
         RhinoDoc.NewDocument -= Register;
+        RhinoDoc.EndOpenDocument -= RegisterOpen;
+
         RhinoAIHost.RegisterDocumentWatcher();
 
         string? portStr = Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar);
