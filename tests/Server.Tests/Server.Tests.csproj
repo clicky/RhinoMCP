@@ -31,6 +31,14 @@
     <Compile Include="../../rhino/plugin/Server/SchemaBuilder.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/ParameterBinder.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/ResourceRegistry.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/ToolResultFormatter.cs" LinkBase="ServerSources" />
+  </ItemGroup>
+
+  <!-- IToolResult is the contract every tool returns and the formatter renders; both are Rhino-free. -->
+  <ItemGroup>
+    <Compile Include="../../rhino/plugin/Tools/ToolResult.cs" LinkBase="PluginSources" />
+    <Using Include="System.Text.Json" />
+    <Using Include="RhinoAI.Server" />
   </ItemGroup>
 
   <ItemGroup>
