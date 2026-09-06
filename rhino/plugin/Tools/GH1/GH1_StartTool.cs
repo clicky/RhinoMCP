@@ -15,6 +15,11 @@ public static class GH1_StartTool
         try
         {
             RhinoApp.RunScript(doc.RuntimeSerialNumber, "_Grasshopper", true);
+            if (Instances.ActiveDocument is null)
+            {
+                Grasshopper.Kernel.GH_Document ghDoc = Instances.DocumentServer.AddNewDocument();
+                Instances.ActiveCanvas.Document = ghDoc;
+            }
         }
         catch (Exception ex)
         {
