@@ -10,7 +10,7 @@ public static class GH1_ConnectManyTool
     public record struct WireSpec(string SrcId, string Src, string DstId, string Dst);
     public record struct Endpoint(Guid Id, string Param);
     public record struct WireResult(int Index, bool Ok, Endpoint? Src, Endpoint? Dst, string? Error);
-    public record struct BatchResult(int Count, int OkCount, WireResult[] Wires);
+    public record struct BatchResult(int Count, int OkCount, WireResult[] Wires, GH1_Utils.SolveSummary? Solve);
 
     [McpServerTool("g1_connect_many", "Connect GH1 Wires (Batch)", false, false)]
     [Description("Wire multiple output→input connections in one call. Same selector semantics as 'g1_connect' (numeric index or Name/NickName; '' or '0' for pure params). A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
@@ -23,7 +23,7 @@ public static class GH1_ConnectManyTool
         if (wires is null || wires.Length == 0)
             return Failure(
                 ToolError.BadArgument,
-                ContentBlock.CreateJson(new BatchResult(0, 0, [])),
+                ContentBlock.CreateJson(new BatchResult(0, 0, [], null)),
                 "No wires were supplied",
                 "Pass at least one {SrcId, Src, DstId, Dst} entry");
 
@@ -36,13 +36,18 @@ public static class GH1_ConnectManyTool
         for (int i = 0; i < wires.Length; i++)
             results[i] = WireOne(doc, i, wires[i], rewiring);
 
-        if (solve) doc.NewSolution(false);
+        GH1_Utils.SolveSummary? summary = null;
+        if (solve)
+        {
+            doc.NewSolution(false);
+            summary = GH1_Utils.Summarize(doc);
+        }
         GH1_Utils.Redraw();
 
         int okCount = 0;
         for (int i = 0; i < results.Length; i++) if (results[i].Ok) okCount++;
 
-        return Success(new BatchResult(wires.Length, okCount, results), rewiring.Guidance);
+        return Success(new BatchResult(wires.Length, okCount, results, summary), rewiring.Guidance);
     }
 
     private static WireResult WireOne(GH_Document doc, int idx, WireSpec w, Rewiring rewiring)

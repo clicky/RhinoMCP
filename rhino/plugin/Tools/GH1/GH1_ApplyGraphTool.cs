@@ -24,7 +24,8 @@ public static class GH1_ApplyGraphTool
         PlacedRef[] Placed,
         PlaceError[] PlaceErrors,
         WireResult[] Wires,
-        int WiresOk);
+        int WiresOk,
+        GH1_Utils.SolveSummary? Solve);
 
     [McpServerTool("g1_apply_graph", "Apply GH1 Graph", false, false)]
     [Description("Place sliders + components and wire them in one call. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g1_connect'.")]
@@ -94,8 +95,12 @@ public static class GH1_ApplyGraphTool
                 wireResults[i] = WireOne(i, wires[i], keyToObj, rewiring);
         }
 
+        GH1_Utils.SolveSummary? summary = null;
         if (solve)
+        {
             doc.NewSolution(false);
+            summary = GH1_Utils.Summarize(doc);
+        }
         GH1_Utils.Redraw();
 
         int wiresOk = 0;
@@ -106,7 +111,7 @@ public static class GH1_ApplyGraphTool
         if (rewiring.Guidance is string rewired)
             coerced.Note(rewired);
 
-        return Success(new ApplyResult(placed.ToArray(), placeErrors.ToArray(), wireResults, wiresOk), coerced.Guidance);
+        return Success(new ApplyResult(placed.ToArray(), placeErrors.ToArray(), wireResults, wiresOk, summary), coerced.Guidance);
     }
 
     private static bool TryPlaceSlider(GH_Document doc, SliderSpec s, Coercions coerced, out GH_NumberSlider? slider, out string error)
