@@ -15,7 +15,7 @@ namespace RhinoAI.Tools;
 // summary in a single round-trip, so the agent can orient before acting without
 // chaining get_selection / list_objects / view calls. Pull-only, read-only.
 [McpServerToolType]
-public static class GetContextTool
+public static partial class GetContextTool
 {
     public sealed record SelectedObject(string Id, string Name, string Layer, string Type);
 
@@ -30,13 +30,11 @@ public static class GetContextTool
 
     public sealed record DocSummary(int ObjectCount, int LayerCount);
 
-    public sealed record GrasshopperSummary(string Version, bool CanvasOpen, int ComponentCount, int WireCount);
-
     public sealed record ContextSnapshot(
-        SelectedObject[] Selection,
+        IEnumerable<SelectedObject> Selection,
         ViewportSummary? ActiveViewport,
         DocSummary Document,
-        GrasshopperSummary[] Grasshopper,
+        IEnumerable<GrasshopperSummary> Grasshopper,
         // Per-section failures, so one throwing section never nukes the snapshot.
         string[]? Warnings);
 
@@ -49,13 +47,11 @@ public static class GetContextTool
         SelectedObject[] selection = Try(() => SelectionOf(doc), [], "selection", warnings);
         ViewportSummary? viewport = Try(() => SummarizeViewport(doc), null, "viewport", warnings);
         DocSummary document = Try(() => SummarizeDocument(doc), new DocSummary(0, 0), "document", warnings);
-        GrasshopperSummary[] grasshopper =
-        [
-            Try(SummarizeGrasshopper1, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper1", warnings),
+        List<GrasshopperSummary> grasshopper =
+        [Try(SummarizeGrasshopper1, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper1", warnings)];
 #if R9
-            Try(SummarizeGrasshopper2, new GrasshopperSummary("GH2", false, 0, 0), "grasshopper2", warnings),
+        grasshopper.Add(SummarizeGrasshopper2());
 #endif
-        ];
 
         ContextSnapshot snapshot = new(
             selection,
@@ -165,26 +161,14 @@ public static class GetContextTool
 #if R9
     private static GrasshopperSummary SummarizeGrasshopper2()
     {
-        if (!GH2_Utils.TryPeekDoc(out Grasshopper2.Doc.Document ghDoc))
-            return new GrasshopperSummary("GH2", false, 0, 0);
-
-        int components = 0;
-        int wires = 0;
-        foreach (Grasshopper2.Doc.IDocumentObject obj in ghDoc.Objects.Forwards)
+        try
         {
-            components++;
-            if (obj is Grasshopper2.Components.Component comp)
-            {
-                foreach (Grasshopper2.Parameters.IParameter input in comp.Parameters.Inputs)
-                    wires += input.Inputs.Count;
-            }
-            else if (obj is Grasshopper2.Parameters.IParameter param)
-            {
-                wires += param.Inputs.Count;
-            }
+            return Grasshopper2.Summarize();
         }
-
-        return new GrasshopperSummary("GH2", true, components, wires);
+        catch
+        {
+            return new GrasshopperSummary("GH2", false, 0, 0);
+        }
     }
 #endif
 
