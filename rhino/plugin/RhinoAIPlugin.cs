@@ -15,6 +15,7 @@ public class RhinoAIPlugin : PlugIn
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
         RhinoDoc.NewDocument += Register;
+        RhinoDoc.EndOpenDocument += RegisterOpen;
 
         CommandInterceptors = new CommandInterceptorHost();
 
