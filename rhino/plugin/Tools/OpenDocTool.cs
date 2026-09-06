@@ -37,10 +37,10 @@ internal static class OpenDocTool
         foreach (RhinoView? view in doc.Views)
         {
             if (view is null) continue;
-            view.ActiveViewport.ZoomExtents();
+            view.ActiveViewport?.ZoomExtents();
         }
 
-        doc.Views.Redraw();
+        doc.Views.Redraw(true);
 
         return Success(new
         {

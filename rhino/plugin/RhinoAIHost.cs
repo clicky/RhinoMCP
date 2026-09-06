@@ -20,9 +20,20 @@ internal static class RhinoAIHost
     // Re-dropping a already-adopted listener is a no-op.
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
 
-    static RhinoAIHost()
+    private static void OpenServer(object? sender, DocumentOpenEventArgs e)
     {
-        RhinoDoc.CloseDocument += CloseServer;
+        // Not a new file
+        if (e.Merge) return;
+        if (e.Reference) return;
+
+        if (TryGetNextPort(out int port))
+        {
+            Start(e.Document, port);
+        }
+        else
+        {
+            // TODO : Inform user
+        }
     }
 
     // A doc that owned a listener is closing (File>New/Open, or a plain close). 
@@ -46,8 +57,10 @@ internal static class RhinoAIHost
     public static bool TryGetPortFor(RhinoDoc doc, out int port)
     {
         port = -1;
-        if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server)) return false;
-        if (!server.HasStarted) return false;
+        if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server))
+            return false;
+        if (!server.HasStarted)
+            return false;
         port = server.Port;
         return true;
     }
@@ -306,4 +319,11 @@ internal static class RhinoAIHost
 
         return true;
     }
+
+    internal static void RegisterDocumentWatcher()
+    {
+        RhinoDoc.CloseDocument += CloseServer;
+        RhinoDoc.BeginOpenDocument += OpenServer;
+    }
+
 }
