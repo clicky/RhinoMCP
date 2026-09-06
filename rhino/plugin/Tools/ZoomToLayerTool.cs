@@ -5,7 +5,7 @@ using Rhino.Geometry;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class ZoomToLayerTool
+internal static class ZoomToLayerTool
 {
     [McpServerTool("zoom_to_layer", "Zoom To Layer", false, false)]
     [Description("Zoom the active viewport to fit all objects on a layer (full path).")]

@@ -3,7 +3,7 @@ using Rhino.Commands;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GetCommandsTool
+internal static class GetCommandsTool
 {
     private const int MaxResults = 200;
 

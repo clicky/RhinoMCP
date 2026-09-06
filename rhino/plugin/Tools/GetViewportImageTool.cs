@@ -9,7 +9,7 @@ using Rhino.Geometry;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GetViewportImageTool
+internal static class GetViewportImageTool
 {
 
     [McpServerTool("get_viewport_image", "Capture Viewport Image", false, false)]

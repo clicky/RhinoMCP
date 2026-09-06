@@ -4,7 +4,7 @@ using Rhino.DocObjects;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class OpenDocTool
+internal static class OpenDocTool
 {
     [McpServerTool("open_doc", "Open / Import Document", false, true)]
     [Description("Import a .3dm (or other supported) file into the current document. Headless — no dialogs. Optionally clear the document first to make this behave like an open-in-place.")]

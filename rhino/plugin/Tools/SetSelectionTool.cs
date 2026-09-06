@@ -3,7 +3,7 @@ using Rhino.DocObjects;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class SetSelectionTool
+internal static class SetSelectionTool
 {
     [McpServerTool("set_selection", "Set Selection", false, false)]
     [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection.")]

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace RhinoAI.Resources;
 
 [McpServerResourceType]
-public static class CommandHelpResource
+internal static class CommandHelpResource
 {
     private static readonly HttpClient Http = new()
     {

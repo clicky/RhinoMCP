@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class AskUserTool
+internal static class AskUserTool
 {
     [McpServerTool("ask_user", "Ask User", true, false)]
     [BackgroundThread]

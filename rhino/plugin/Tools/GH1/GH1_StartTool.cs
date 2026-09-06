@@ -5,7 +5,7 @@ using Grasshopper;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_StartTool
+internal static class GH1_StartTool
 {
 
     [McpServerTool("g1_start", "Start Grasshopper 1", false, false)]

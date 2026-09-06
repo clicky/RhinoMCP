@@ -12,7 +12,7 @@ namespace RhinoAI.Internal;
 // /plugin/Tools/ so the router's source generator (which scans that folder)
 // cannot turn them into agent-facing proxies.
 [McpServerToolType]
-public static class RouterControlTool
+internal static class RouterControlTool
 {
     [McpServerTool("_router_spawn_listener")]
     [Description("Router-internal: create a new RhinoDoc and start an MCP listener bound to it. Returns { port }.")]

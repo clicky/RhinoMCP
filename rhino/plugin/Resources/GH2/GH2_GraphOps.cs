@@ -5,7 +5,7 @@ using GH2Component = Grasshopper2.Components.Component;
 
 namespace RhinoAI.Resources;
 
-public static class GH2_GraphOps
+internal static class GH2_GraphOps
 {
     // Wiring src into dst closes a loop when src already depends on dst, so the walk goes upstream from src looking for dst.
     public static bool WouldCycle(Document doc, IDocumentObject src, IDocumentObject dst)

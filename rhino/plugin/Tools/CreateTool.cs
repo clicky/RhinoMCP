@@ -4,7 +4,7 @@ using RhinoAI.ScriptProjects;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class CreateTool
+internal static class CreateTool
 {
     [McpServerTool("manage_plugin_commands", "Manage Plugin Commands", false, true)]
     [Description("Give the user a reusable Rhino command. After every call the new or changed command is usable immediately. Use this when the user wants to create a reusable tool ('create me a command', 'make me a tool for this'). Rhino 9 or later only.")]

@@ -6,7 +6,7 @@ using Rhino.Geometry;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_SolveTool
+internal static class GH1_SolveTool
 {
 
     [McpServerTool("g1_solve_graph", "Solve GH1 Graph", false, false)]

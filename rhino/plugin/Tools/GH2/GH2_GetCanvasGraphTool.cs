@@ -9,7 +9,7 @@ using GH2Component = Grasshopper2.Components.Component;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_GetCanvasGraphTool
+internal static class GH2_GetCanvasGraphTool
 {
     public record struct MessageInfo(string Level, string Text);
     public record struct Endpoint(Guid Id, string Param);

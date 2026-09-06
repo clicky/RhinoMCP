@@ -3,7 +3,7 @@ using Grasshopper2.UI;
 
 namespace RhinoAI.Resources;
 
-public abstract record GH2_ProxyResolution
+internal abstract record GH2_ProxyResolution
 {
     public sealed record Found(ObjectProxy Proxy) : GH2_ProxyResolution;
     public sealed record Ambiguous(IReadOnlyList<ObjectProxy> Candidates) : GH2_ProxyResolution;
@@ -13,9 +13,9 @@ public abstract record GH2_ProxyResolution
     private GH2_ProxyResolution() { }
 }
 
-public readonly record struct GH2_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
+internal readonly record struct GH2_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
 
-public static class GH2_ProxyResolver
+internal static class GH2_ProxyResolver
 {
     public static bool IsDeprecated(ObjectProxy proxy) =>
         proxy.Obsolete || proxy.Nomen.Rank == Rank.Hidden;

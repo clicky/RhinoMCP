@@ -8,7 +8,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_DeleteComponentTool
+internal static class GH1_DeleteComponentTool
 {
 
     [McpServerTool("g1_delete_component", "Delete GH1 Component", false, false)]

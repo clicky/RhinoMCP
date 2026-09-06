@@ -3,7 +3,7 @@ using RhinoAI.Resources;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_StartTool
+internal static class GH2_StartTool
 {
 
     private static Guid GH2_PlugInId { get; } = new("8307876d-a461-4daa-bb77-eb3715925513");

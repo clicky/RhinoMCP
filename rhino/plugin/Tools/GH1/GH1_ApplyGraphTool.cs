@@ -10,7 +10,7 @@ using Grasshopper.Kernel.Special;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_ApplyGraphTool
+internal static class GH1_ApplyGraphTool
 {
     public record struct ComponentSpec(string Key, string Selector, float X, float Y);
     public record struct SliderSpec(string Key, double Min, double Value, double Max, string Type, string? Name, float X, float Y);

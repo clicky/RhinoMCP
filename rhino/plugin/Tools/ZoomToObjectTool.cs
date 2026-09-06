@@ -4,7 +4,7 @@ using Rhino.Geometry;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class ZoomToObjectTool
+internal static class ZoomToObjectTool
 {
     [McpServerTool("zoom_to_object", "Zoom To Object", false, false)]
     [Description("Zoom the active viewport to fit one or more objects by GUID.")]

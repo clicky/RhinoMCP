@@ -15,7 +15,7 @@ namespace RhinoAI.Server;
 // just gets back the JSON response inline, which every MCP client we test with
 // tolerates.
 
-public static class McpEndpointExtensions
+internal static class McpEndpointExtensions
 {
     public static IEndpointConventionBuilder MapMcp(
         this IEndpointRouteBuilder endpoints, string pattern, bool filtered = false)

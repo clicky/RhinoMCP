@@ -5,7 +5,7 @@ using Grasshopper2.Doc;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_ClearCanvasTool
+internal static class GH2_ClearCanvasTool
 {
     public record struct ClearResult(int Removed);
 

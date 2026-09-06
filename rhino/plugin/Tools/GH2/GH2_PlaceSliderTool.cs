@@ -9,7 +9,7 @@ using Grasshopper2.UI;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_PlaceSliderTool
+internal static class GH2_PlaceSliderTool
 {
     public record struct SliderInfo(Guid Id, double Min, double Value, double Max, int Decimals, float X, float Y);
 

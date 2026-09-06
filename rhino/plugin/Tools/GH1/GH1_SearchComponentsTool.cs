@@ -6,7 +6,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_SearchComponentsTool
+internal static class GH1_SearchComponentsTool
 {
     public readonly record struct ProxyHit(
         Guid Guid,

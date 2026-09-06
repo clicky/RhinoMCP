@@ -1,6 +1,6 @@
 namespace RhinoAI.Tools;
 
-public interface IToolResult
+internal interface IToolResult
 {
 
     /// <summary>What kind of failure this is, or null when the call succeeded.</summary>
@@ -21,7 +21,7 @@ public interface IToolResult
 
 }
 
-public abstract record ToolResult : IToolResult
+internal abstract record ToolResult : IToolResult
 {
 
     public ToolError? Code { get; }
@@ -123,7 +123,7 @@ public abstract record ToolResult : IToolResult
 
 }
 
-public enum ToolError
+internal enum ToolError
 {
     // Generic
     NotFound, BadArgument, Ambiguous, Unsupported, Refused, Failed, Exception,

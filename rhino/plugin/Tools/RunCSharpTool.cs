@@ -3,7 +3,7 @@ using RhinoAI.ScriptProjects;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class RunCSharpTool
+internal static class RunCSharpTool
 {
 
     private const string HEADER_NOTATION = "// #! csharp";

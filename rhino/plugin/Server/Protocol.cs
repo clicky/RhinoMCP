@@ -138,7 +138,7 @@ internal sealed class CallToolResult
 // Public so tools that need to return mixed content (e.g. a text message plus
 // an inline image) can yield ContentBlock instances directly. Tools that just
 // return a string never have to touch this type.
-public sealed class ContentBlock
+internal sealed class ContentBlock
 {
     public string Type { get; set; } = "text";
 

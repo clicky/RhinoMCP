@@ -3,7 +3,7 @@ using Grasshopper.Kernel;
 
 namespace RhinoAI.Resources;
 
-public abstract record GH1_ProxyResolution
+internal abstract record GH1_ProxyResolution
 {
     public sealed record Found(IGH_ObjectProxy Proxy) : GH1_ProxyResolution;
     public sealed record Ambiguous(IReadOnlyList<IGH_ObjectProxy> Candidates) : GH1_ProxyResolution;
@@ -13,9 +13,9 @@ public abstract record GH1_ProxyResolution
     private GH1_ProxyResolution() { }
 }
 
-public readonly record struct GH1_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
+internal readonly record struct GH1_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
 
-public static class GH1_ProxyResolver
+internal static class GH1_ProxyResolver
 {
     // GH_Exposure.hidden is -1 (all bits set), so a HasFlag/bitmask test matches everything. Compare by value.
     public static bool IsDeprecated(IGH_ObjectProxy proxy) =>

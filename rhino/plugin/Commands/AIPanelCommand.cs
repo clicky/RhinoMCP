@@ -10,7 +10,7 @@ public class AIPanelCommand : RhinoCommand
 
     protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
     {
-        Guid panelId = AIPAnel.PanelId;
+        Guid panelId = AIPanel.PanelId;
         bool visible = Rhino.UI.Panels.IsPanelVisible(panelId);
         if (visible)
             Rhino.UI.Panels.ClosePanel(panelId);

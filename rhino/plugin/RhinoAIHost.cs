@@ -7,7 +7,7 @@ using Rhino.FileIO;
 
 namespace RhinoAI;
 
-public static class RhinoAIHost
+internal static class RhinoAIHost
 {
 
     private static Dictionary<uint, McpServer> Servers { get; } = new();

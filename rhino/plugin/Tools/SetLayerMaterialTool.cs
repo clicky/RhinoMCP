@@ -6,7 +6,7 @@ using Rhino.DocObjects;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class SetLayerMaterialTool
+internal static class SetLayerMaterialTool
 {
     [McpServerTool("set_layer_material", "Set Layer Material", false, true)]
     [Description("Set the render material on a layer. Accepts diffuse color, transparency, and gloss. Optionally also sets the layer display color.")]

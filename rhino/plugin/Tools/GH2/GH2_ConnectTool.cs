@@ -6,7 +6,7 @@ using Grasshopper2.Parameters;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_ConnectTool
+internal static class GH2_ConnectTool
 {
     public record struct Endpoint(Guid Id, string Param);
     public record struct Wired(Endpoint Src, Endpoint Dst);

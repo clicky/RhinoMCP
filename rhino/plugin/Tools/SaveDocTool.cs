@@ -5,7 +5,7 @@ namespace RhinoAI.Tools;
 // TODO : This needs some tweaking
 
 [McpServerToolType]
-public static class SaveDocTool
+internal static class SaveDocTool
 {
     [McpServerTool("save_doc", "Save Document", false, true)]
     [Description("Write the current document to the given .3dm path. Headless — no dialogs. Overwrites any existing file at the path.")]

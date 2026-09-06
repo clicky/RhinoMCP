@@ -10,7 +10,7 @@ using GH2Component = Grasshopper2.Components.Component;
 
 namespace RhinoAI.Resources;
 
-public static class GH2_Utils
+internal static class GH2_Utils
 {
 
   public static bool TryGetDoc(RhinoDoc rhDoc, out Document doc)

@@ -8,7 +8,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_PlaceComponentTool
+internal static class GH1_PlaceComponentTool
 {
     public record struct PlacedInfo(Guid Id, string Name, string Category, string SubCategory, float X, float Y);
 

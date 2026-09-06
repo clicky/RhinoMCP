@@ -11,7 +11,7 @@ internal interface IRhinoCodeRunner
 
 }
 
-public enum Lang { Python3, CSharp }
+internal enum Lang { Python3, CSharp }
 
 
 internal interface IProjectRunner

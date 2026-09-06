@@ -7,7 +7,7 @@ using Grasshopper2.Doc;
 namespace RhinoAI.Resources;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum GH2DiagnosticLevel
+internal enum GH2DiagnosticLevel
 {
     Remark,
     Warning,
@@ -15,11 +15,11 @@ public enum GH2DiagnosticLevel
     Fault,
 }
 
-public sealed record GH2Diagnostic(Guid Id, string Name, string Nickname, GH2DiagnosticLevel Level, string Message);
+internal sealed record GH2Diagnostic(Guid Id, string Name, string Nickname, GH2DiagnosticLevel Level, string Message);
 
-public sealed record GH2SolveSummary(bool Solved, int Objects, string Phase, int Errors, int Warnings, GH2Diagnostic[] Diagnostics);
+internal sealed record GH2SolveSummary(bool Solved, int Objects, string Phase, int Errors, int Warnings, GH2Diagnostic[] Diagnostics);
 
-public static class GH2_Diagnostics
+internal static class GH2_Diagnostics
 {
 
     public static TimeSpan SolveTimeout { get; } = TimeSpan.FromSeconds(60);

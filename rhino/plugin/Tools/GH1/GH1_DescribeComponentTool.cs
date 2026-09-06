@@ -6,7 +6,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_DescribeComponentTool
+internal static class GH1_DescribeComponentTool
 {
     public record struct ParamInfo(string Name, string NickName, string Description, string TypeName, string Access, bool Optional);
 

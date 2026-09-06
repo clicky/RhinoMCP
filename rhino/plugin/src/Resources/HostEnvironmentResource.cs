@@ -6,7 +6,7 @@ using Rhino.Runtime;
 namespace RhinoAI.Resources;
 
 [McpServerResourceType]
-public static class HostEnvironmentResource
+internal static class HostEnvironmentResource
 {
     [McpServerResource(
         UriTemplate = "rhino://host/environment",

@@ -5,7 +5,7 @@ using Grasshopper.Kernel;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_ConnectManyTool
+internal static class GH1_ConnectManyTool
 {
     public record struct WireSpec(string SrcId, string Src, string DstId, string Dst);
     public record struct Endpoint(Guid Id, string Param);

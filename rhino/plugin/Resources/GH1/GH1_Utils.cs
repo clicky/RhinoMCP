@@ -4,7 +4,7 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoAI.Resources;
 
-public static class GH1_Utils
+internal static class GH1_Utils
 {
 
   public static bool TryGetOrCreateDoc(RhinoDoc rhDoc, out GH_Document doc)

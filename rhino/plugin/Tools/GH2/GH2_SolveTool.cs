@@ -7,7 +7,7 @@ using Grasshopper2.Doc;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_SolveTool
+internal static class GH2_SolveTool
 {
 
     [McpServerTool("g2_solve_canvas", "Solve GH2 Canvas", false, false)]

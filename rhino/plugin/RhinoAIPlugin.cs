@@ -21,7 +21,7 @@ public class RhinoAIPlugin : PlugIn
         // prompt; Part 1's settings dialog re-runs this when the agent config changes.
         AgentRegistry.Refresh();
 
-        Rhino.UI.Panels.RegisterPanel(this, typeof(AIPAnel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
+        Rhino.UI.Panels.RegisterPanel(this, typeof(AIPanel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
         return base.OnLoad(ref errorMessage);
     }
 

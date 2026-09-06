@@ -7,7 +7,7 @@ namespace RhinoAI.Tools;
 
 // TODO : Close doc should not spawn a rhino to close it
 [McpServerToolType]
-public static class CloseDocTool
+internal static class CloseDocTool
 {
     [McpServerTool("close_doc", "Close Document", false, true)]
     [Description("Close the current Rhino document. If path is given, save to that .3dm path first; otherwise discard unsaved changes.")]

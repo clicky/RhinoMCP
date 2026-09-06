@@ -10,7 +10,7 @@ using Grasshopper.Kernel.Types;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH1_GetCanvasGraphTool
+internal static class GH1_GetCanvasGraphTool
 {
     public record struct Message(string Level, string Text);
     public record struct Endpoint(Guid Id, string Param);

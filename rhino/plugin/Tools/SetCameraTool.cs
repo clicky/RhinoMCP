@@ -4,7 +4,7 @@ using Rhino.Geometry;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class SetCameraTool
+internal static class SetCameraTool
 {
     [McpServerTool("set_camera", "Set Camera", false, false)]
     [Description("Set the active viewport camera. Any subset of position, target, up vector, lens length, projection, or framing bounding-box may be supplied.")]

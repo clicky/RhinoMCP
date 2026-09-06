@@ -9,7 +9,7 @@ using GH2Component = Grasshopper2.Components.Component;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GH2_DescribeComponentTool
+internal static class GH2_DescribeComponentTool
 {
     public record struct ParamInfo(string Name, string UserName, string Description, string TypeName, string Access, string Requirement);
 

@@ -1,7 +1,7 @@
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class GetSelectionTool
+internal static class GetSelectionTool
 {
     [McpServerTool("get_selection", "Get Selection", true, false)]
     [Description("Return all currently selected objects in Rhino.")]

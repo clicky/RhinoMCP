@@ -3,7 +3,7 @@ using Rhino.DocObjects;
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
-public static class ListObjectsTool
+internal static class ListObjectsTool
 {
     [McpServerTool("list_objects", "List Document Objects", true, false)]
     [Description("List objects in the active document. Filter by name, layer, or geometry type. Pure query — does not change selection or viewport.")]

@@ -15,7 +15,7 @@ namespace RhinoAI.Tools;
 // summary in a single round-trip, so the agent can orient before acting without
 // chaining get_selection / list_objects / view calls. Pull-only, read-only.
 [McpServerToolType]
-public static partial class GetContextTool
+internal static partial class GetContextTool
 {
     public sealed record SelectedObject(string Id, string Name, string Layer, string Type);
 
