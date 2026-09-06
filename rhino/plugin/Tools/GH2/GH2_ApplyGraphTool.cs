@@ -45,6 +45,7 @@ public static class GH2_ApplyGraphTool
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return GH2_Failures.NoDocument;
 
+        Coercions coerced = new();
         var keyToObj = new Dictionary<string, IDocumentObject>(StringComparer.Ordinal);
         var placed = new List<PlacedRef>();
         var placeErrors = new List<PlaceError>();
@@ -58,7 +59,7 @@ public static class GH2_ApplyGraphTool
                 {
                     placeErrors.Add(new PlaceError(s.Key, "duplicate key"));
                 }
-                else if (TryPlaceSlider(doc, s, out var slider, out var err))
+                else if (TryPlaceSlider(doc, s, coerced, out var slider, out var err))
                 {
                     keyToObj[s.Key] = slider!;
                     placed.Add(new PlacedRef(s.Key, slider!.InstanceId, "Slider"));
@@ -130,28 +131,27 @@ public static class GH2_ApplyGraphTool
         int wiresOk = 0;
         for (int i = 0; i < wireResults.Length; i++) if (wireResults[i].Ok) wiresOk++;
 
-        return Success(new ApplyResult(
-            placed.ToArray(),
-            placeErrors.ToArray(),
-            wireResults,
-            wiresOk,
-            solved,
-            phase,
-            errors,
-            warnings,
-            diagnostics));
+        return Success(
+            new ApplyResult(
+                placed.ToArray(),
+                placeErrors.ToArray(),
+                wireResults,
+                wiresOk,
+                solved,
+                phase,
+                errors,
+                warnings,
+                diagnostics),
+            coerced.Guidance);
     }
 
-    private static bool TryPlaceSlider(Document doc, SliderSpec s, out NumberSliderObject? slider, out string error)
+    private static bool TryPlaceSlider(Document doc, SliderSpec s, Coercions coerced, out NumberSliderObject? slider, out string error)
     {
         slider = null;
-        if (s.Decimals < 0 || s.Decimals > 12)
-        {
-            error = $"Invalid decimals '{s.Decimals}'. Valid range: 0..12.";
-            return false;
-        }
+        int decimals = coerced.Clamp($"slider '{s.Key}' decimals", s.Decimals, 0, 12);
+        (double min, double value, double max) = coerced.SliderRange(s.Min, s.Value, s.Max);
 
-        var number = new UiNumber(s.Decimals, (decimal)s.Value, (decimal)s.Min, (decimal)s.Max);
+        var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);
         slider = new NumberSliderObject(string.IsNullOrEmpty(s.Name) ? "num" : s.Name!, number);
         doc.Objects.Add(slider, new PointF(s.X, s.Y));
         error = "";

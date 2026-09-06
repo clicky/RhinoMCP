@@ -27,6 +27,10 @@ public static class CreateTool
         if (problem is not CommandNameProblem.None)
             return Failure(ToolError.BadArgument, "Command Name has issues", PluginNaming.Describe(problem, originalName));
 
+        Coercions coerced = new();
+        if (!string.Equals(commandName, originalName, StringComparison.Ordinal))
+            coerced.Note($"'{originalName}' is not a legal command name, so it was created as '{commandName}'");
+
         IToolResult result = ScriptProjectRunner.TryCreate(out IProjectRunner runner);
         if (result.Error is not null)
             return result;
@@ -37,7 +41,7 @@ public static class CreateTool
             if (removeResult.Error is not null)
                 return removeResult;
 
-            return Success(ContentBlock.CreateText($"Command {commandName} was removed successfully"));
+            return Success(ContentBlock.CreateText($"Command {commandName} was removed successfully"), coerced.Guidance);
         }
 
         if (parsedAction is PluginCommandAction.Add or PluginCommandAction.Update)
@@ -49,7 +53,7 @@ public static class CreateTool
             if (addResult.Error is not null)
                 return addResult;
 
-            return Success(ContentBlock.CreateText($"Command {commandName} is now loaded and ready"));
+            return Success(ContentBlock.CreateText($"Command {commandName} is now loaded and ready"), coerced.Guidance);
         }
 
         return Failure(ToolError.Failed, "No result for given action and inputs");

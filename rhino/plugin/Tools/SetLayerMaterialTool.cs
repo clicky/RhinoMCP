@@ -43,17 +43,21 @@ public static class SetLayerMaterialTool
 
         Material mat = doc.Materials[matIdx];
 
+        Coercions coerced = new();
+
         if (parsedColor.HasValue)
             mat.DiffuseColor = parsedColor.Value;
         if (transparency.HasValue)
-            mat.Transparency = Math.Clamp(transparency.Value, 0.0, 1.0);
+            mat.Transparency = coerced.Clamp("transparency", transparency.Value, 0.0, 1.0);
         if (gloss.HasValue)
-            mat.Shine = Math.Clamp(gloss.Value, 0.0, 1.0) * Material.MaxShine;
+            mat.Shine = coerced.Clamp("gloss", gloss.Value, 0.0, 1.0) * Material.MaxShine;
 
         mat.CommitChanges();
         doc.Views.Redraw();
 
-        return Success(ContentBlock.CreateText($"Updated layer \"{layer}\" (material index {matIdx})."));
+        return Success(
+            ContentBlock.CreateText($"Updated layer \"{layer}\" (material index {matIdx})."),
+            coerced.Guidance);
     }
 
     private static Color? ParseColor(string? s)

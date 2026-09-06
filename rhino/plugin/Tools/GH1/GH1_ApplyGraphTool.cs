@@ -39,6 +39,7 @@ public static class GH1_ApplyGraphTool
         if (!GH1_Utils.TryGetOrCreateDoc(rhDoc, out GH_Document doc))
             return GH1_Failures.NoDocument;
 
+        Coercions coerced = new();
         Dictionary<string, IGH_DocumentObject> keyToObj = new(StringComparer.Ordinal);
         List<PlacedRef> placed = [];
         List<PlaceError> placeErrors = [];
@@ -52,7 +53,7 @@ public static class GH1_ApplyGraphTool
                 {
                     placeErrors.Add(new PlaceError(s.Key, "duplicate key"));
                 }
-                else if (TryPlaceSlider(doc, s, out GH_NumberSlider? slider, out string err) && slider is not null)
+                else if (TryPlaceSlider(doc, s, coerced, out GH_NumberSlider? slider, out string err) && slider is not null)
                 {
                     keyToObj[s.Key] = slider!;
                     placed.Add(new PlacedRef(s.Key, slider!.InstanceGuid, "Slider"));
@@ -100,22 +101,22 @@ public static class GH1_ApplyGraphTool
         if (wireResults[i].Ok)
             wiresOk++;
 
-        return Success(new ApplyResult(placed.ToArray(), placeErrors.ToArray(), wireResults, wiresOk));
+        return Success(new ApplyResult(placed.ToArray(), placeErrors.ToArray(), wireResults, wiresOk), coerced.Guidance);
     }
 
-    private static bool TryPlaceSlider(GH_Document doc, SliderSpec s, out GH_NumberSlider? slider, out string error)
+    private static bool TryPlaceSlider(GH_Document doc, SliderSpec s, Coercions coerced, out GH_NumberSlider? slider, out string error)
     {
         slider = null;
         if (!TryParseAccuracy(s.Type, out GH_SliderAccuracy accuracy))
-        {
-            error = $"Invalid slider type '{s.Type}'. Valid: 'float', 'int', 'even', 'odd'.";
-            return false;
-        }
+            coerced.Note($"slider '{s.Key}' type '{s.Type}' is not one of 'float', 'int', 'even', 'odd', so 'float' was used");
+
+        (double min, double value, double max) = coerced.SliderRange(s.Min, s.Value, s.Max);
+
         slider = new GH_NumberSlider();
         slider.CreateAttributes();
-        slider.Slider.Minimum = (decimal)s.Min;
-        slider.Slider.Maximum = (decimal)s.Max;
-        slider.Slider.Value = (decimal)s.Value;
+        slider.Slider.Minimum = (decimal)min;
+        slider.Slider.Maximum = (decimal)max;
+        slider.Slider.Value = (decimal)value;
         slider.Slider.Type = accuracy;
         if (!string.IsNullOrEmpty(s.Name))
             slider.NickName = s.Name;

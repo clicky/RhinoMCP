@@ -26,8 +26,10 @@ public static class GH2_PlaceSliderTool
         [Description("Optional UserName for the slider.")] string? name = null,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
-        if (decimals < 0 || decimals > 12)
-            return Failure(ToolError.BadArgument, $"Invalid decimals '{decimals}'", "Valid range: 0..12");
+        Coercions coerced = new();
+
+        decimals = coerced.Clamp("decimals", decimals, 0, 12);
+        (min, value, max) = coerced.SliderRange(min, value, max);
 
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return GH2_Failures.NoDocument;
@@ -41,13 +43,15 @@ public static class GH2_PlaceSliderTool
         GH2_Utils.Redraw();
 
         UiNumber current = slider.InternalNumber;
-        return Success(new SliderInfo(
-            slider.InstanceId,
-            (double)current.Lower,
-            (double)current.Value,
-            (double)current.Upper,
-            current.Decimals,
-            x,
-            y));
+        return Success(
+            new SliderInfo(
+                slider.InstanceId,
+                (double)current.Lower,
+                (double)current.Value,
+                (double)current.Upper,
+                current.Decimals,
+                x,
+                y),
+            coerced.Guidance);
     }
 }

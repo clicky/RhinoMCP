@@ -26,8 +26,12 @@ public static class GH1_PlaceSliderTool
         [Description("Optional NickName for the slider.")] string? name = null,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
+        Coercions coerced = new();
+
         if (!TryParseAccuracy(type, out GH_SliderAccuracy accuracy))
-            return Failure(ToolError.BadArgument, $"Invalid type '{type}'", "Valid values: 'float', 'int', 'even', 'odd'");
+            coerced.Note($"type '{type}' is not one of 'float', 'int', 'even', 'odd', so 'float' was used");
+
+        (min, value, max) = coerced.SliderRange(min, value, max);
 
         if (!GH1_Utils.TryGetOrCreateDoc(rhDoc, out GH_Document doc))
             return GH1_Failures.NoDocument;
@@ -49,14 +53,16 @@ public static class GH1_PlaceSliderTool
         if (solve) doc.NewSolution(false);
         GH1_Utils.ZoomExtents();
 
-        return Success(new SliderInfo(
-            slider.InstanceGuid,
-            (double)slider.Slider.Minimum,
-            (double)slider.Slider.Value,
-            (double)slider.Slider.Maximum,
-            FormatAccuracy(slider.Slider.Type),
-            x,
-            y));
+        return Success(
+            new SliderInfo(
+                slider.InstanceGuid,
+                (double)slider.Slider.Minimum,
+                (double)slider.Slider.Value,
+                (double)slider.Slider.Maximum,
+                FormatAccuracy(slider.Slider.Type),
+                x,
+                y),
+            coerced.Guidance);
     }
 
     private static string FormatAccuracy(GH_SliderAccuracy accuracy) => accuracy switch

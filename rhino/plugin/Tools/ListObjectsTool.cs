@@ -16,8 +16,8 @@ public static class ListObjectsTool
         [Description("Include locked objects (default true)")] bool includeLocked = true,
         [Description("Maximum number of objects to return (default 1000)")] int limit = 1000)
     {
-        if (limit < 1)
-            return Failure(ToolError.BadArgument, $"limit must be 1 or more, got {limit}");
+        Coercions coerced = new();
+        limit = coerced.Clamp("limit", limit, 1, int.MaxValue);
 
         ObjectEnumeratorSettings settings = new()
         {
@@ -29,13 +29,12 @@ public static class ListObjectsTool
             IncludeGrips = false,
         };
 
-        string? warning = null;
         if (!string.IsNullOrEmpty(geometryType))
         {
             if (TryParseObjectType(geometryType, out ObjectType filter))
                 settings.ObjectTypeFilter = filter;
             else
-                warning = $"Unknown geometryType: {geometryType}. Returning all object types unfiltered.";
+                coerced.Note($"geometryType '{geometryType}' is not recognised, so no type filter was applied");
         }
 
         if (!string.IsNullOrEmpty(layer))
@@ -44,7 +43,7 @@ public static class ListObjectsTool
             if (idx >= 0)
                 settings.LayerIndexFilter = idx;
             else
-                warning = warning is null ? $"Layer not found: {layer}" : $"{warning} Layer not found: {layer}";
+                coerced.Note($"layer '{layer}' was not found, so no layer filter was applied");
         }
 
         HashSet<string> nameSet = (names ?? []).ToHashSet(StringComparer.Ordinal);
@@ -75,7 +74,7 @@ public static class ListObjectsTool
             count = results.Length,
             truncated,
             objects = results,
-        }, warning);
+        }, coerced.Guidance);
     }
 
     private static bool TryParseObjectType(string s, out ObjectType type)

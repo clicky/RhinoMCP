@@ -23,6 +23,7 @@ public static class SetCameraTool
             return Failure(ToolError.RH_View_NotFound, guidance: "Ask the user to open a viewport");
 
         RhinoViewport vp = view.ActiveViewport;
+        Coercions coerced = new();
 
         if (!string.IsNullOrEmpty(projection))
         {
@@ -43,8 +44,10 @@ public static class SetCameraTool
         if (up is not null)
             vp.CameraUp = (Vector3d)up;
 
-        if (lensLength.HasValue)
+        if (lensLength.HasValue && lensLength.Value > 0)
             vp.Camera35mmLensLength = lensLength.Value;
+        else if (lensLength.HasValue)
+            coerced.Note($"lensLength {lensLength.Value} is not positive, so it was left unchanged");
 
         if (boxMin is null != boxMax is null)
             return Failure(ToolError.BadArgument, "boxMin and boxMax must be supplied together", "Pass both corners, or neither");
@@ -60,6 +63,6 @@ public static class SetCameraTool
 
         view.Redraw();
 
-        return Success(ContentBlock.CreateText("Camera updated."));
+        return Success(ContentBlock.CreateText("Camera updated."), coerced.Guidance);
     }
 }
