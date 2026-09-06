@@ -46,6 +46,10 @@ internal static class RouterControlTool
                     error = "_New ran but no new RhinoDoc appeared.";
                     return;
                 }
+                
+                // auto-start already bound it; report that port
+                if (RhinoAIHost.TryGetPortFor(newDoc, out port))
+                    return;
 
                 if (!RhinoAIHost.TryGetNextPort(out port))
                 {

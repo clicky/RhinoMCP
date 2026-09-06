@@ -20,6 +20,9 @@ internal static class RhinoAIHost
     // Re-dropping a already-adopted listener is a no-op.
     private static TimeSpan HeartbeatInterval { get; } = TimeSpan.FromSeconds(15);
 
+    // Re-bound by the replacing document, so a swap doesn't strand clients on a fixed port.
+    private static int? PortFreedByLastClose { get; set; }
+
     private static void OpenServer(object? sender, DocumentOpenEventArgs e)
     {
         if (e.Merge)
@@ -36,20 +39,35 @@ internal static class RhinoAIHost
         if (e.Document is null)
             return;
 
-        if (Servers.TryGetValue(e.Document.RuntimeSerialNumber, out McpServer? server) && server is not null)
+        if (HasStarted(e.Document))
+            return;
+
+        int? wanted = PortFreedByLastClose;
+        if (!TryGetReplacementPort(out int port))
         {
-            if (server.HasStarted)
-                return;
+            RhinoApp.WriteLine("[Rhino MCP] No free port available; the MCP server did not restart.");
+            return;
         }
 
-        if (TryGetNextPort(out int port))
+        if (!Start(e.Document, port))
         {
-            Start(e.Document, port);
+            RhinoApp.WriteLine($"[Rhino MCP] The MCP server failed to restart on port {port}.");
+            return;
         }
-        else
-        {
-            // TODO : Inform user
-        }
+
+        if (wanted is int previous && previous != port)
+            RhinoApp.WriteLine($"[Rhino MCP] Port {previous} was unavailable; MCP server moved to http://localhost:{port}/");
+    }
+
+    private static bool TryGetReplacementPort(out int port)
+    {
+        int? recycled = PortFreedByLastClose;
+        PortFreedByLastClose = null;
+
+        if (recycled is int candidate && TryBindCandidate(candidate, out port))
+            return true;
+
+        return TryGetNextPort(out port);
     }
 
     // A doc that owned a listener is closing (File>New/Open, or a plain close). 
@@ -61,6 +79,7 @@ internal static class RhinoAIHost
 
         if (server is not null)
         {
+            PortFreedByLastClose = server.Port;
             WriteDeparture(server.Port);
             server.Stop();
         }
@@ -123,8 +142,9 @@ internal static class RhinoAIHost
 
     public static bool Start(RhinoDoc doc, int port)
     {
-        if (HasStarted(doc))
-            return true;
+        if (TryGetPortFor(doc, out int existingPort))
+            return existingPort == port;
+
         McpServer server = new();
         Servers[doc.RuntimeSerialNumber] = server;
 
