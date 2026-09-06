@@ -5,6 +5,10 @@ using Rhino.Geometry;
 using Grasshopper;
 using Grasshopper.Kernel;
 
+#if R9
+using RhinoAI.Resources;
+#endif
+
 namespace RhinoAI.Tools;
 
 // One-shot grounding snapshot: selection + active viewport + doc/Grasshopper
@@ -32,12 +36,12 @@ public static class GetContextTool
         SelectedObject[] Selection,
         ViewportSummary? ActiveViewport,
         DocSummary Document,
-        GrasshopperSummary Grasshopper,
+        GrasshopperSummary[] Grasshopper,
         // Per-section failures, so one throwing section never nukes the snapshot.
         string[]? Warnings);
 
     [McpServerTool("get_context", "Get Context Snapshot", true, false)]
-    [Description("One round-trip grounding snapshot of current state: the active-doc selection (ids/types/layers), the active viewport (name + camera summary), a doc summary (object/layer counts), and a Grasshopper summary (component/wire count if a canvas is open). Read-only; pulls everything you need to orient before acting.")]
+    [Description("One round-trip grounding snapshot of current state: the active-doc selection (ids/types/layers), the active viewport (name + camera summary), a doc summary (object/layer counts), and one Grasshopper summary per version (Version 'GH1' or 'GH2', each with component/wire counts when that canvas is open). Read-only; pulls everything you need to orient before acting, and never opens a canvas that is not already open.")]
     public static IToolResult GetContext(RhinoDoc doc)
     {
         List<string> warnings = [];
@@ -45,7 +49,13 @@ public static class GetContextTool
         SelectedObject[] selection = Try(() => SelectionOf(doc), [], "selection", warnings);
         ViewportSummary? viewport = Try(() => SummarizeViewport(doc), null, "viewport", warnings);
         DocSummary document = Try(() => SummarizeDocument(doc), new DocSummary(0, 0), "document", warnings);
-        GrasshopperSummary grasshopper = Try(SummarizeGrasshopper, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper", warnings);
+        GrasshopperSummary[] grasshopper =
+        [
+            Try(SummarizeGrasshopper1, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper1", warnings),
+#if R9
+            Try(SummarizeGrasshopper2, new GrasshopperSummary("GH2", false, 0, 0), "grasshopper2", warnings),
+#endif
+        ];
 
         ContextSnapshot snapshot = new(
             selection,
@@ -127,7 +137,7 @@ public static class GetContextTool
 
     // GH1 only: it is the canvas compiled in every Rhino target (GH2 is R9-only and
     // excluded from this build). A one-line component/wire count, no per-object detail.
-    private static GrasshopperSummary SummarizeGrasshopper()
+    private static GrasshopperSummary SummarizeGrasshopper1()
     {
         GH_Document? ghDoc = Instances.ActiveCanvas?.Document;
         if (ghDoc is null)
@@ -151,6 +161,32 @@ public static class GetContextTool
 
         return new GrasshopperSummary("GH1", true, components, wires);
     }
+
+#if R9
+    private static GrasshopperSummary SummarizeGrasshopper2()
+    {
+        if (!GH2_Utils.TryPeekDoc(out Grasshopper2.Doc.Document ghDoc))
+            return new GrasshopperSummary("GH2", false, 0, 0);
+
+        int components = 0;
+        int wires = 0;
+        foreach (Grasshopper2.Doc.IDocumentObject obj in ghDoc.Objects.Forwards)
+        {
+            components++;
+            if (obj is Grasshopper2.Components.Component comp)
+            {
+                foreach (Grasshopper2.Parameters.IParameter input in comp.Parameters.Inputs)
+                    wires += input.Inputs.Count;
+            }
+            else if (obj is Grasshopper2.Parameters.IParameter param)
+            {
+                wires += param.Inputs.Count;
+            }
+        }
+
+        return new GrasshopperSummary("GH2", true, components, wires);
+    }
+#endif
 
     public static double[] XYZ(Point3d p) => [p.X, p.Y, p.Z];
 }

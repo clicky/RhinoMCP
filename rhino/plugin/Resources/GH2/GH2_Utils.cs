@@ -34,6 +34,13 @@ public static class GH2_Utils
     return doc is not null;
   }
 
+  // Read-only probe for callers that must never put GH2 on screen, unlike TryGetDoc, which launches it.
+  public static bool TryPeekDoc(out Document doc)
+  {
+    doc = Editor.Instance?.Canvas?.Document!;
+    return doc is not null;
+  }
+
   public static bool TryLoadDocument(RhinoDoc rhDoc, string path)
   {
     if (!TryGetDoc(rhDoc, out _)) return false;
