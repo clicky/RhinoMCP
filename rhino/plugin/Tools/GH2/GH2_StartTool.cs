@@ -15,17 +15,18 @@ public static class GH2_StartTool
         if (RhinoApp.Version.Major < 9)
             return Failure(ToolError.GH_NotAvailable, "GH2 needs Rhino 9 or later");
 
+        bool result = false;
         try
         {
             string commandName = Rhino.Commands.Command.IsCommand("_G2") ? "_G2" : "_GH2";
-            RhinoApp.RunScript(doc.RuntimeSerialNumber, commandName, true);
+            result = RhinoApp.RunScript(doc.RuntimeSerialNumber, commandName, true);
         }
         catch (Exception ex)
         {
             return Failure(ex, "GH2 could not be started; ask the user to start it manually");
         }
 
-        return GH2_Utils.TryGetDoc(doc, out _)
+        return result
             ? Success(ContentBlock.CreateText("Opened GH2"))
             : Failure(ToolError.GH_NotAvailable, "GH2 did not open");
     }

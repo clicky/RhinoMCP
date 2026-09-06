@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 using RhinoAI.Resources;
 
 using Eto.Drawing;
@@ -26,15 +28,11 @@ public static class GH2_ApplyGraphTool
         PlaceError[] PlaceErrors,
         WireResult[] Wires,
         int WiresOk,
-        bool Solved,
-        string Phase,
-        int Errors,
-        int Warnings,
-        GH2Diagnostic[] Diagnostics);
+        GH2SolveSummary? Solve);
 
     [McpServerTool("g2_apply_graph", "Apply GH2 Graph", false, false)]
     [Description("Place sliders + components and wire them in one call on the active GH2 canvas. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g2_connect'. When solve=true (the default) it also solves at the end and reads the result back, returning the same solve summary as g2_solve_canvas: {Solved, Phase, Errors, Warnings, Diagnostics[]}, where each diagnostic is {Id, Name, Nickname, Level (Remark|Warning|Error|Fault), Message}. Solved is true only when the solution completed with no Error or Fault; read the Diagnostics back to see which components failed and why.")]
-    public static IToolResult Apply(
+    public static async Task<IToolResult> Apply(
         RhinoDoc rhDoc,
         [Description("Sliders to place: {Key, Min, Value, Max, Decimals, Name?, X, Y}. Decimals: 0..12.")] SliderSpec[] sliders,
         [Description("Components to place: {Key, Selector, X, Y}. Selector is a Guid (preferred) or component Name.")] ComponentSpec[] components,
@@ -97,35 +95,8 @@ public static class GH2_ApplyGraphTool
                 wireResults[i] = WireOne(i, wires[i], keyToObj);
         }
 
-        // StartWait (not Start) so the diagnostics we read back reflect the
-        // completed solve, giving the authoring loop the same end-to-end signal in
-        // one call that g2_solve_canvas returns. The placed/wired work has already
-        // happened, so on a solver-infrastructure throw we degrade gracefully:
-        // surface the failure as a Fault diagnostic and still return the partial
-        // work (key->Guid map, per-step results) rather than throwing out of the tool.
-        GH2Diagnostic[] diagnostics = [];
-        bool solved = false;
-        string phase = "Skipped";
-        int errors = 0;
-        int warnings = 0;
-        if (solve)
-        {
-            try
-            {
-                Solution solution = doc.Solution.StartWait();
-                List<GH2Diagnostic> collected = GH2_Diagnostics.Collect(doc);
-                (errors, warnings) = GH2_Diagnostics.Count(collected);
-                diagnostics = collected.ToArray();
-                phase = solution.Phase.ToString();
-                solved = solution.Phase == SolutionPhase.Completed && errors == 0;
-            }
-            catch (Exception ex)
-            {
-                phase = "Faulted";
-                errors = 1;
-                diagnostics = [new GH2Diagnostic(Guid.Empty, "Solution", "", GH2DiagnosticLevel.Fault, ex.Message)];
-            }
-        }
+        // A solver throw still returns the partial work rather than losing the placing and wiring already done.
+        GH2SolveSummary? summary = solve ? await GH2_Diagnostics.SolveAsync(doc) : null;
         GH2_Utils.Redraw();
 
         int wiresOk = 0;
@@ -137,11 +108,7 @@ public static class GH2_ApplyGraphTool
                 placeErrors.ToArray(),
                 wireResults,
                 wiresOk,
-                solved,
-                phase,
-                errors,
-                warnings,
-                diagnostics),
+                summary),
             coerced.Guidance);
     }
 

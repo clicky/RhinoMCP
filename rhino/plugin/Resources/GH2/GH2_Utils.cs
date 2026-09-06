@@ -47,11 +47,14 @@ public static class GH2_Utils
     return Editor.Instance.Documents.TryOpenDocument(path, OpenDocumentOptions.Default);
   }
 
+  // Marshalled because the solve-capable tools now await, and their continuation may land off the UI thread.
   public static void Redraw()
   {
-    var canvas = Editor.Instance?.Canvas;
-    if (canvas is null) return;
-    canvas.Invalidate();
+    RhinoApp.InvokeOnUiThread(new Action(() =>
+    {
+      Canvas? canvas = Editor.Instance?.Canvas;
+      canvas?.Invalidate();
+    }));
   }
 
   public static string ClassifyKind(Type t)

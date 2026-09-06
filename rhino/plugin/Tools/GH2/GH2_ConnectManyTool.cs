@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 using RhinoAI.Resources;
 
 using Grasshopper2.Doc;
@@ -11,11 +13,11 @@ public static class GH2_ConnectManyTool
     public record struct WireSpec(string SrcId, string Src, string DstId, string Dst);
     public record struct Endpoint(Guid Id, string Param);
     public record struct WireResult(int Index, bool Ok, Endpoint? Src, Endpoint? Dst, string? Error);
-    public record struct BatchResult(int Count, int OkCount, WireResult[] Wires);
+    public record struct BatchResult(int Count, int OkCount, WireResult[] Wires, GH2SolveSummary? Solve);
 
     [McpServerTool("g2_connect_many", "Connect GH2 Wires (Batch)", false, false)]
     [Description("Wire multiple output→input connections in one call on the active GH2 canvas. Same selector semantics as 'g2_connect'. A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
-    public static IToolResult ConnectMany(
+    public static async Task<IToolResult> ConnectMany(
         RhinoDoc rhDoc,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
@@ -23,7 +25,7 @@ public static class GH2_ConnectManyTool
         if (wires is null || wires.Length == 0)
             return Failure(
                 ToolError.BadArgument,
-                ContentBlock.CreateJson(new BatchResult(0, 0, [])),
+                ContentBlock.CreateJson(new BatchResult(0, 0, [], null)),
                 "No wires were supplied",
                 "Pass at least one {SrcId, Src, DstId, Dst} entry");
 
@@ -35,8 +37,7 @@ public static class GH2_ConnectManyTool
         for (int i = 0; i < wires.Length; i++)
             results[i] = WireOne(doc, i, wires[i]);
 
-        if (solve)
-            doc.Solution.Start();
+        GH2SolveSummary? summary = solve ? await GH2_Diagnostics.SolveAsync(doc) : null;
         GH2_Utils.Redraw();
 
         int okCount = 0;
@@ -44,7 +45,7 @@ public static class GH2_ConnectManyTool
             if (results[i].Ok)
                 okCount++;
 
-        return Success(new BatchResult(wires.Length, okCount, results));
+        return Success(new BatchResult(wires.Length, okCount, results, summary));
     }
 
     private static WireResult WireOne(Document doc, int idx, WireSpec w)
