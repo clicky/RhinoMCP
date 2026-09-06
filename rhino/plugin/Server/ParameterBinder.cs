@@ -97,18 +97,7 @@ internal static class ResultUnwrapper
     private static async ValueTask<object?> UnwrapTaskAsync(Task task)
     {
         await task.ConfigureAwait(false);
-        Type taskType = task.GetType();
-        if (taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>))
-        {
-            // Task.CompletedTask and Task.FromResult(default) are actually
-            // Task<VoidTaskResult> at runtime; the sentinel result type is the
-            // BCL's way of unifying void-returning tasks. Surface it as null
-            // so non-generic Task signatures behave consistently.
-            if (taskType.GetGenericArguments()[0].FullName == "System.Threading.Tasks.VoidTaskResult")
-                return null;
-            return taskType.GetProperty("Result")?.GetValue(task);
-        }
-        return null;
+        return ResultOf(task);
     }
 
     private static async ValueTask<object?> UnwrapValueTaskAsync(ValueTask vt)
@@ -125,9 +114,27 @@ internal static class ResultUnwrapper
         {
             Task converted = (Task)rt.GetMethod(nameof(ValueTask<object>.AsTask))!.Invoke(raw, null)!;
             await converted.ConfigureAwait(false);
-            return converted.GetType().GetProperty("Result")?.GetValue(converted);
+            return ResultOf(converted);
         }
 
         return raw;
+    }
+
+    // An async method that actually suspends returns an AsyncStateMachineBox that derives from Task<T> instead of being one, so the closed Task<T> has to be found on the base chain.
+    private static object? ResultOf(Task task)
+    {
+        for (Type? type = task.GetType(); type is not null; type = type.BaseType)
+        {
+            if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(Task<>))
+                continue;
+
+            // Void-returning tasks are Task<VoidTaskResult> at runtime; the sentinel must not leak out as a result.
+            if (type.GetGenericArguments()[0].FullName == "System.Threading.Tasks.VoidTaskResult")
+                return null;
+
+            return type.GetProperty("Result")?.GetValue(task);
+        }
+
+        return null;
     }
 }
