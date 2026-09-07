@@ -15,8 +15,8 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 internal static class GH2_ApplyGraphTool
 {
-    public record struct ComponentSpec(string Key, string Selector, float X, float Y);
-    public record struct SliderSpec(string Key, double Min, double Value, double Max, int Decimals, string? Name, float X, float Y);
+    public record struct ComponentSpec(string Key, string Selector, int X, int Y);
+    public record struct SliderSpec(string Key, decimal Min, decimal Value, decimal Max, int Decimals, string? Name, int X, int Y);
     public record struct WireSpec(string SrcKey, string Src, string DstKey, string Dst);
 
     public record struct PlacedRef(string Key, Guid Id, string Kind);
@@ -121,9 +121,9 @@ internal static class GH2_ApplyGraphTool
     {
         slider = null;
         int decimals = coerced.Clamp($"slider '{s.Key}' decimals", s.Decimals, 0, 12);
-        (double min, double value, double max) = coerced.SliderRange(s.Min, s.Value, s.Max);
+        (decimal min, decimal value, decimal max) = coerced.SliderRange(s.Min, s.Value, s.Max, $"slider '{s.Key}'");
 
-        var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);
+        var number = new UiNumber(decimals, value, min, max);
         slider = new NumberSliderObject(string.IsNullOrEmpty(s.Name) ? "num" : s.Name!, number);
         doc.Objects.Add(slider, new PointF(s.X, s.Y));
         error = "";

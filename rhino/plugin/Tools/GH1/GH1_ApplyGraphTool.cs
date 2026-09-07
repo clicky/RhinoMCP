@@ -12,8 +12,8 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 internal static class GH1_ApplyGraphTool
 {
-    public record struct ComponentSpec(string Key, string Selector, float X, float Y);
-    public record struct SliderSpec(string Key, double Min, double Value, double Max, string Type, string? Name, float X, float Y);
+    public record struct ComponentSpec(string Key, string Selector, int X, int Y);
+    public record struct SliderSpec(string Key, decimal Min, decimal Value, decimal Max, string Type, string? Name, int X, int Y);
     public record struct WireSpec(string SrcKey, string Src, string DstKey, string Dst);
 
     public record struct PlacedRef(string Key, Guid Id, string Kind);
@@ -120,13 +120,13 @@ internal static class GH1_ApplyGraphTool
         if (!TryParseAccuracy(s.Type, out GH_SliderAccuracy accuracy))
             coerced.Note($"slider '{s.Key}' type '{s.Type}' is not one of 'float', 'int', 'even', 'odd', so 'float' was used");
 
-        (double min, double value, double max) = coerced.SliderRange(s.Min, s.Value, s.Max);
+        (decimal min, decimal value, decimal max) = coerced.SliderRange(s.Min, s.Value, s.Max, $"slider '{s.Key}'");
 
         slider = new GH_NumberSlider();
         slider.CreateAttributes();
-        slider.Slider.Minimum = (decimal)min;
-        slider.Slider.Maximum = (decimal)max;
-        slider.Slider.Value = (decimal)value;
+        slider.Slider.Minimum = min;
+        slider.Slider.Maximum = max;
+        slider.Slider.Value = value;
         slider.Slider.Type = accuracy;
         if (!string.IsNullOrEmpty(s.Name))
             slider.NickName = s.Name;

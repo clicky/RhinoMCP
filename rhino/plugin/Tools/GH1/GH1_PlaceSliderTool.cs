@@ -11,17 +11,17 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 internal static class GH1_PlaceSliderTool
 {
-    public record struct SliderInfo(Guid Id, double Min, double Value, double Max, string Type, float X, float Y);
+    public record struct SliderInfo(Guid Id, decimal Min, decimal Value, decimal Max, string Type, int X, int Y);
 
     [McpServerTool("g1_place_slider", "Place GH1 Number Slider", false, false)]
     [Description("Place a Number Slider on the active GH1 canvas with the given range and current value. type: 'float' | 'int' | 'even' | 'odd'.")]
     public static IToolResult Place(
         RhinoDoc rhDoc,
-        [Description("Minimum slider value.")] double min,
-        [Description("Initial slider value.")] double value,
-        [Description("Maximum slider value.")] double max,
-        [Description("Canvas X position in pixels.")] float x = 100,
-        [Description("Canvas Y position in pixels.")] float y = 100,
+        [Description("Minimum slider value.")] decimal min,
+        [Description("Initial slider value.")] decimal value,
+        [Description("Maximum slider value.")] decimal max,
+        [Description("Canvas X position in pixels.")] int x = 100,
+        [Description("Canvas Y position in pixels.")] int y = 100,
         [Description("Slider accuracy: 'float', 'int', 'even', or 'odd'.")] string type = "float",
         [Description("Optional NickName for the slider.")] string? name = null,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
@@ -39,9 +39,9 @@ internal static class GH1_PlaceSliderTool
         GH_NumberSlider slider = new();
         slider.CreateAttributes();
 
-        slider.Slider.Minimum = (decimal)min;
-        slider.Slider.Maximum = (decimal)max;
-        slider.Slider.Value = (decimal)value;
+        slider.Slider.Minimum = min;
+        slider.Slider.Maximum = max;
+        slider.Slider.Value = value;
         slider.Slider.Type = accuracy;
 
         if (!string.IsNullOrEmpty(name))
@@ -53,12 +53,16 @@ internal static class GH1_PlaceSliderTool
         if (solve) doc.NewSolution(false);
         GH1_Utils.ZoomExtents();
 
+        coerced.NoteAdjusted("min", min, slider.Slider.Minimum);
+        coerced.NoteAdjusted("max", max, slider.Slider.Maximum);
+        coerced.NoteAdjusted("value", value, slider.Slider.Value);
+
         return Success(
             new SliderInfo(
                 slider.InstanceGuid,
-                (double)slider.Slider.Minimum,
-                (double)slider.Slider.Value,
-                (double)slider.Slider.Maximum,
+                slider.Slider.Minimum,
+                slider.Slider.Value,
+                slider.Slider.Maximum,
                 FormatAccuracy(slider.Slider.Type),
                 x,
                 y),

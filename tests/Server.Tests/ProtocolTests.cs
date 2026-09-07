@@ -28,6 +28,34 @@ public class ProtocolTests
     }
 
     [Test]
+    public void Non_finite_doubles_are_written_as_named_string_literals()
+    {
+        string json = JsonSerializer.Serialize(
+            new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity },
+            McpSerializer.Options);
+
+        Assert.That(json, Is.EqualTo("[\"NaN\",\"Infinity\",\"-Infinity\"]"));
+    }
+
+    [TestCase("\"NaN\"")]
+    [TestCase("\"Infinity\"")]
+    [TestCase("\"-Infinity\"")]
+    [TestCase("1e400")]
+    public void Non_finite_doubles_are_refused_on_the_way_in(string json)
+        => Assert.That(
+            () => JsonSerializer.Deserialize<double>(json, McpSerializer.Options),
+            Throws.InstanceOf<JsonException>());
+
+    [Test]
+    public void Finite_doubles_still_bind_from_numbers_and_strings()
+        => Assert.Multiple(() =>
+        {
+            Assert.That(JsonSerializer.Deserialize<double>("1.5", McpSerializer.Options), Is.EqualTo(1.5));
+            Assert.That(JsonSerializer.Deserialize<double>("\"1.5\"", McpSerializer.Options), Is.EqualTo(1.5));
+            Assert.That(JsonSerializer.Deserialize<double?>("null", McpSerializer.Options), Is.Null);
+        });
+
+    [Test]
     public void Response_omits_result_and_error_when_both_null()
     {
         JsonRpcResponse response = new() { Id = JsonDocument.Parse("1").RootElement };

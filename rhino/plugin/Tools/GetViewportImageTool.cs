@@ -29,14 +29,18 @@ internal static class GetViewportImageTool
         if (doc.IsHeadless)
             return Failure(ToolError.RH_Doc_Headless);
 
-        width = Math.Min(width, 1280);
-        height = Math.Min(height, 720);
-
         if (width <= 0)
-            return Failure(ToolError.BadArgument, $"{nameof(width)} was < 0", $"Pass a {nameof(width)} that is > 0.");
-        
+            return Failure(ToolError.BadArgument, $"{nameof(width)} was {width}", $"Pass a {nameof(width)} greater than 0.");
+
         if (height <= 0)
-            return Failure(ToolError.BadArgument, $"{nameof(height)} was < 0", $"Pass a {nameof(height)} that is > 0.");
+            return Failure(ToolError.BadArgument, $"{nameof(height)} was {height}", $"Pass a {nameof(height)} greater than 0.");
+
+        if (zoom is <= 0)
+            return Failure(ToolError.BadArgument, $"{nameof(zoom)} was {zoom}", $"Pass a {nameof(zoom)} greater than 0: above 1 zooms in, below 1 zooms out.");
+
+        Coercions coerced = new();
+        width = coerced.Clamp(nameof(width), width, 1, 1280);
+        height = coerced.Clamp(nameof(height), height, 1, 720);
 
         RhinoView? activeView = doc.Views.ActiveView;
         if (activeView is null)
@@ -86,7 +90,19 @@ internal static class GetViewportImageTool
             }
 
             if (zoom.HasValue)
+            {
                 vp.Magnify(zoom.Value, true);
+
+                double magnified = vp.Camera35mmLensLength;
+                double bounded = coerced.Clamp(
+                    $"the lens length {nameof(zoom)} produced",
+                    magnified,
+                    SetCameraTool.LensMinimum,
+                    SetCameraTool.LensMaximum);
+
+                if (bounded != magnified)
+                    vp.Camera35mmLensLength = bounded;
+            }
 
             activeView.Redraw();
 
@@ -117,8 +133,11 @@ internal static class GetViewportImageTool
         bitmap.Save(ms, ImageFormat.Jpeg);
 
         return Success(
-            ContentBlock.CreateText(SerializeResult(meta)),
-            ContentBlock.CreateImage(ms.ToArray(), "image/jpeg"));
+            [
+                ContentBlock.CreateText(SerializeResult(meta)),
+                ContentBlock.CreateImage(ms.ToArray(), "image/jpeg"),
+            ],
+            coerced.Guidance);
     }
 
     private sealed class CaptureMetadata

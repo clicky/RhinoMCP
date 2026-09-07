@@ -191,6 +191,13 @@ internal sealed class ToolHandler
 
             rawResult = _method.Invoke(_method.IsStatic ? null : scope.GetService(_method.DeclaringType!), args);
         }
+        catch (TargetInvocationException tie) when (tie.InnerException is OverflowException overflow)
+        {
+            return ToolResultFormatter.Format(ToolResult.Failure(
+                ToolError.BadArgument,
+                overflow.Message,
+                "A value exceeded the range of the type it was applied to; pass a smaller number."));
+        }
         catch (TargetInvocationException tie) when (tie.InnerException is not null)
         {
             throw tie.InnerException;

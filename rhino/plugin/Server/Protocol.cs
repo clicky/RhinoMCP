@@ -234,9 +234,10 @@ internal static class McpSerializer
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        // Non-finite doubles go out as "NaN"/"Infinity" strings (the protobuf and Newtonsoft convention) rather than throwing halfway through a response.
+        NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.AllowNamedFloatingPointLiterals,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-        Converters = { new LenientStringConverter(), new LenientBoolConverter(), new LenientIntConverter() },
+        Converters = { new LenientStringConverter(), new LenientBoolConverter(), new LenientIntConverter(), new FiniteDoubleConverter() },
     };
 }
 
@@ -286,6 +287,40 @@ internal sealed class LenientBoolConverter : JsonConverter<bool>
         => bool.TryParse(value, out bool b)
             ? b
             : throw new JsonException($"Cannot convert \"{value}\" to bool.");
+}
+
+// Strict where the value reaches geometry: a non-finite double is refused at the bind, so it can never enter a document. Writing keeps the named literals that registering any double converter would otherwise suppress.
+internal sealed class FiniteDoubleConverter : JsonConverter<double>
+{
+    public override double Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        double value = reader.TokenType switch
+        {
+            JsonTokenType.Number => reader.GetDouble(),
+            JsonTokenType.String => FromString(reader.GetString()),
+            _ => throw new JsonException($"Cannot convert {reader.TokenType} to a number."),
+        };
+
+        return double.IsFinite(value)
+            ? value
+            : throw new JsonException($"must be a finite number but was {Named(value)}");
+    }
+
+    public override void Write(Utf8JsonWriter writer, double value, JsonSerializerOptions options)
+    {
+        if (double.IsFinite(value))
+            writer.WriteNumberValue(value);
+        else
+            writer.WriteStringValue(Named(value));
+    }
+
+    private static double FromString(string? value)
+        => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : throw new JsonException($"Cannot convert \"{value}\" to a number.");
+
+    private static string Named(double value)
+        => double.IsNaN(value) ? "NaN" : value > 0 ? "Infinity" : "-Infinity";
 }
 
 // Liberal at the LLM boundary: accept integral decimals (3.0) and numeric strings as ints.

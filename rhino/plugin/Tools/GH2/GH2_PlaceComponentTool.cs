@@ -10,15 +10,15 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 internal static class GH2_PlaceComponentTool
 {
-    public record struct PlacedInfo(Guid Id, string Name, string Category, string SubCategory, float X, float Y);
+    public record struct PlacedInfo(Guid Id, string Name, string Category, string SubCategory, int X, int Y);
 
     [McpServerTool("g2_place_component", "Place GH2 Component", false, false)]
     [Description("Place a GH2 component onto the active canvas. 'selector' may be a Guid (proxy id) or a component name. Matches obsolete/hidden by name only when includeDeprecated is true (a Guid always works); ambiguous names return candidates.")]
     public static IToolResult Place(
         RhinoDoc rhDoc,
         [Description("Component Guid (proxy id) or component Name (case-insensitive).")] string selector,
-        [Description("Canvas X position in pixels.")] float x = 100,
-        [Description("Canvas Y position in pixels.")] float y = 100,
+        [Description("Canvas X position in pixels.")] int x = 100,
+        [Description("Canvas Y position in pixels.")] int y = 100,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true,
         [Description("Also match obsolete/hidden components by name (a Guid always works). Default false.")] bool includeDeprecated = false)
     {
@@ -56,7 +56,7 @@ internal static class GH2_PlaceComponentTool
         };
     }
 
-    private static IToolResult PlaceResolved(Document doc, ObjectProxy proxy, string selector, float x, float y, bool solve)
+    private static IToolResult PlaceResolved(Document doc, ObjectProxy proxy, string selector, int x, int y, bool solve)
     {
         IDocumentObject? obj = proxy.Emit();
         if (obj is null)
@@ -65,7 +65,7 @@ internal static class GH2_PlaceComponentTool
         return PlaceObject(doc, obj, x, y, solve);
     }
 
-    private static IToolResult PlaceObject(Document doc, IDocumentObject obj, float x, float y, bool solve)
+    private static IToolResult PlaceObject(Document doc, IDocumentObject obj, int x, int y, bool solve)
     {
         doc.Objects.Add(obj, new PointF(x, y));
         if (solve)

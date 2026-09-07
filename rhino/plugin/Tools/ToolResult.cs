@@ -70,6 +70,9 @@ internal abstract record ToolResult : IToolResult
     public static IToolResult Success(ContentBlock attachment, string? guidance = null)
         => new Ok([attachment], guidance);
 
+    public static IToolResult Success(IList<ContentBlock> attachments, string? guidance)
+        => new Ok(attachments, guidance);
+
     public static IToolResult Success<V>(V value, string? guidance = null)
         => new Ok([ContentBlock.CreateText(JsonSerializer.Serialize(value, McpSerializer.Options))], guidance);
 

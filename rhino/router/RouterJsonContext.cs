@@ -11,7 +11,8 @@ namespace RhinoAI.Router;
 // and let us carry dynamic per-tool argument shapes through the JSON-RPC envelope.
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals)]
     
 // Router-specific types.
 [JsonSerializable(typeof(ChildRhino))]

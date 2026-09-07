@@ -15,5 +15,6 @@ public static class AcpJson
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         PropertyNamingPolicy = null,
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     };
 }
