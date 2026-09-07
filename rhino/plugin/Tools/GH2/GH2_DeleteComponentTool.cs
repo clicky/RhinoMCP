@@ -22,7 +22,7 @@ internal static class GH2_DeleteComponentTool
             return GH2_Failures.NoDocument;
 
         if (!Guid.TryParse(selector, out Guid id))
-            return Failure(ToolError.BadArgument, $"Could not pase guid {selector}");
+            return Failure(ToolError.BadArgument, $"Could not parse guid {selector}");
 
         IDocumentObject obj = doc.Objects.Find(id);
         if (obj is null)
