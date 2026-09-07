@@ -28,6 +28,7 @@ public static class RhinoLocator
             ["8"] = new VersionInstall(["Rhino 8"], ["Rhino 8.app"]),
             ["9"] = new VersionInstall(Rhino9WindowsFolders, Rhino9MacBundles),
             ["WIP"] = new VersionInstall(Rhino9WindowsFolders, Rhino9MacBundles),
+            ["BETA"] = new VersionInstall(Rhino9WindowsFolders, Rhino9MacBundles),
         };
 
     public static string ResolveRhinoExe(string version, IReadOnlyDictionary<string, string>? overrides = null)
