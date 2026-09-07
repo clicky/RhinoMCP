@@ -296,6 +296,24 @@ public class ParameterBinderTests
         Assert.That(ex.Problem, Is.EqualTo("argument 'count' expects integer but got \"abc\""));
     }
 
+    // One bind error per round trip was the same tax the tools used to charge: a model that gets the
+    // vector shape wrong gets it wrong for every vector argument at once.
+    [Test]
+    public void Every_bad_argument_is_reported_together()
+    {
+        ArgumentBindingException[] failures =
+        [
+            new("count", "argument 'count' expects integer but got \"abc\""),
+            new("flag", "argument 'flag' expects boolean but got 1"),
+        ];
+
+        IToolResult result = BindingFailure.Describe("demo_tool", Descriptors(nameof(SampleMethods.M)), failures);
+
+        Assert.That(result.Message, Does.Contain("argument 'count' expects integer"));
+        Assert.That(result.Message, Does.Contain("argument 'flag' expects boolean"));
+        Assert.That(result.Message, Does.StartWith("demo_tool: "));
+    }
+
     [Test]
     public void Binding_failure_names_the_tool_and_its_arguments()
     {

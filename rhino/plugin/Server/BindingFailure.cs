@@ -17,7 +17,16 @@ internal static class BindingFailure
 {
     public static IToolResult Describe(
         string tool, IReadOnlyList<ParameterDescriptor> parameters, ArgumentBindingException failure)
-        => Failure(ToolError.BadArgument, $"{tool}: {failure.Problem}", Signature(tool, parameters));
+        => Describe(tool, parameters, [failure]);
+
+    // Every argument is bound before any is reported, so a call that got three of them wrong is
+    // told all three rather than one per round trip.
+    public static IToolResult Describe(
+        string tool, IReadOnlyList<ParameterDescriptor> parameters, IReadOnlyList<ArgumentBindingException> failures)
+        => Failure(
+            ToolError.BadArgument,
+            $"{tool}: {string.Join("; ", failures.Select(f => f.Problem))}",
+            Signature(tool, parameters));
 
     private static string Signature(string tool, IReadOnlyList<ParameterDescriptor> parameters)
     {

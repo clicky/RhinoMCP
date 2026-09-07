@@ -169,15 +169,22 @@ internal sealed class ToolHandler
 
         using (BindNotes.Call call = BindNotes.Begin())
         {
-            try
+            List<ArgumentBindingException> failures = [];
+
+            for (int i = 0; i < _parameters.Length; i++)
             {
-                for (int i = 0; i < _parameters.Length; i++)
+                try
+                {
                     args[i] = ParameterBinder.Resolve(_parameters[i], arguments, scope, ct);
+                }
+                catch (ArgumentBindingException ex)
+                {
+                    failures.Add(ex);
+                }
             }
-            catch (ArgumentBindingException ex)
-            {
-                return ToolResultFormatter.Format(BindingFailure.Describe(Name, _parameters, ex));
-            }
+
+            if (failures.Count > 0)
+                return ToolResultFormatter.Format(BindingFailure.Describe(Name, _parameters, failures));
 
             coercions = call.Notes;
         }
