@@ -38,25 +38,36 @@ internal sealed class Coercions
         return clamped;
     }
 
-    public (double Min, double Value, double Max) SliderRange(double min, double value, double max)
+    public decimal Clamp(string name, decimal value, decimal min, decimal max)
     {
-        if (double.IsNaN(min) || double.IsNaN(max) || min > max)
+        decimal clamped = Math.Clamp(value, min, max);
+        if (clamped != value)
+            Note($"{name} {Text(value)} was clamped to {Text(clamped)}");
+
+        return clamped;
+    }
+
+    public (decimal Min, decimal Value, decimal Max) SliderRange(decimal min, decimal value, decimal max, string? label = null)
+    {
+        string prefix = label is null ? string.Empty : $"{label} ";
+
+        if (min > max)
         {
-            if (min > max)
-            {
-                Note($"min {Text(min)} was above max {Text(max)}, so they were swapped");
-                (min, max) = (max, min);
-            }
-            else
-            {
-                Note("a slider bound was not a number, used 0 to 1");
-                (min, max) = (0, 1);
-            }
+            Note($"{prefix}min {Text(min)} was above max {Text(max)}, so they were swapped");
+            (min, max) = (max, min);
         }
 
-        return (min, Clamp("value", value, min, max), max);
+        return (min, Clamp($"{prefix}value", value, min, max), max);
+    }
+
+    public void NoteAdjusted(string name, decimal requested, decimal actual)
+    {
+        if (requested != actual)
+            Note($"{name} {Text(requested)} was adjusted to {Text(actual)} to fit the slider's accuracy and range");
     }
 
     private static string Text(double value) => value.ToString("G6", CultureInfo.InvariantCulture);
+
+    private static string Text(decimal value) => value.ToString("G6", CultureInfo.InvariantCulture);
 
 }

@@ -32,6 +32,9 @@ internal static class GH1_SearchComponentsTool
         if (string.IsNullOrEmpty(query))
             return Failure(ToolError.BadArgument, "query is required");
 
+        Coercions coerced = new();
+        limit = coerced.Clamp(nameof(limit), limit, 1, int.MaxValue);
+
         string[] tokens = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
         List<(int Rank, ProxyHit Hit)> hits = [];
@@ -52,12 +55,14 @@ internal static class GH1_SearchComponentsTool
                 new ProxyHit(p.Guid, d.Name, d.NickName, d.Category, d.SubCategory, kind, d.Description, p.Obsolete, p.Exposure == GH_Exposure.hidden)));
         }
 
-        return Success(hits
-            .OrderBy(h => h.Rank)
-            .ThenBy(h => h.Hit.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(limit)
-            .Select(h => h.Hit)
-            .ToList());
+        return Success(
+            hits
+                .OrderBy(h => h.Rank)
+                .ThenBy(h => h.Hit.Name, StringComparer.OrdinalIgnoreCase)
+                .Take(limit)
+                .Select(h => h.Hit)
+                .ToList(),
+            coerced.Guidance);
     }
 
     // Broader matching buries the obvious answer, so an exact name wins, then a name carrying every token.

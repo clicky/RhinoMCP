@@ -6,6 +6,10 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 internal static class SetCameraTool
 {
+    internal const double LensMinimum = 1;
+
+    internal const double LensMaximum = 10_000;
+
     [McpServerTool("set_camera", "Set Camera", false, false)]
     [Description("Set the active viewport camera. Any subset of position, target, up vector, lens length, projection, or framing bounding-box may be supplied.")]
     public static IToolResult SetCamera(
@@ -43,11 +47,12 @@ internal static class SetCameraTool
 
         if (up is not null)
             vp.CameraUp = (Vector3d)up;
+        
 
-        if (lensLength.HasValue && lensLength.Value > 0)
-            vp.Camera35mmLensLength = lensLength.Value;
+        if (lensLength is > 0)
+            vp.Camera35mmLensLength = coerced.Clamp(nameof(lensLength), lensLength.Value, LensMinimum, LensMaximum);
         else if (lensLength.HasValue)
-            coerced.Note($"lensLength {lensLength.Value} is not positive, so it was left unchanged");
+            coerced.Note($"{nameof(lensLength)} {lensLength.Value} is not positive, so it was left unchanged");
 
         if (boxMin is null != boxMax is null)
             return Failure(ToolError.BadArgument, "boxMin and boxMax must be supplied together", "Pass both corners, or neither");

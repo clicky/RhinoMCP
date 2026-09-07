@@ -11,6 +11,7 @@ internal static class PanelJson
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     };
 
     public static string Serialize(PanelEvent value) => JsonSerializer.Serialize(value, Options);

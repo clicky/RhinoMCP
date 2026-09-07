@@ -41,6 +41,9 @@ internal static class GH2_GetCanvasGraphTool
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return GH2_Failures.NoDocument;
 
+        Coercions coerced = new();
+        sample_size = coerced.Clamp(nameof(sample_size), sample_size, 1, int.MaxValue);
+
         List<ObjectInfo> objects = [];
         List<Wire> wires = [];
 
@@ -86,7 +89,7 @@ internal static class GH2_GetCanvasGraphTool
                 outputs));
         }
 
-        return Success(new Graph(objects.ToArray(), wires.ToArray()));
+        return Success(new Graph(objects.ToArray(), wires.ToArray()), coerced.Guidance);
     }
 
     private static MessageInfo[] CollectMessages(IDocumentObject obj)

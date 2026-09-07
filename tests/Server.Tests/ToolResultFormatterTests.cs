@@ -44,6 +44,22 @@ public class ToolResultFormatterTests
     }
 
     [Test]
+    public void Non_finite_doubles_survive_a_payload_instead_of_failing_the_whole_call()
+    {
+        CallToolResult result = ToolResultFormatter.Format(ToolResult.Success(
+            new { location = new[] { 0.0, double.NaN, 12.5 }, lensLength = double.PositiveInfinity }));
+
+        AssertEveryBlockIsValid(result);
+
+        JsonElement payload = JsonDocument.Parse(result.Content[0].Text!).RootElement;
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.GetProperty("location")[1].GetString(), Is.EqualTo("NaN"));
+            Assert.That(payload.GetProperty("lensLength").GetString(), Is.EqualTo("Infinity"));
+        });
+    }
+
+    [Test]
     public void CreateJson_is_a_text_block_not_a_mime_type()
     {
         ContentBlock block = ContentBlock.CreateJson(new { count = 3 });

@@ -10,15 +10,15 @@ namespace RhinoAI.Tools;
 [McpServerToolType]
 internal static class GH1_PlaceComponentTool
 {
-    public record struct PlacedInfo(Guid Id, string Name, string Category, string SubCategory, float X, float Y);
+    public record struct PlacedInfo(Guid Id, string Name, string Category, string SubCategory, int X, int Y);
 
     [McpServerTool("g1_place_component", "Place GH1 Component", false, false)]
     [Description("Place a Grasshopper component onto the active GH1 canvas. 'selector' may be a Guid (proxy id) or a component name. Matches obsolete/hidden by name only when includeDeprecated is true (a Guid always works); ambiguous names return candidates.")]
     public static IToolResult Place(
         RhinoDoc rhDoc,
         [Description("Component Guid (proxy id) or component Name (case-insensitive).")] string selector,
-        [Description("Canvas X position in pixels.")] float x = 100,
-        [Description("Canvas Y position in pixels.")] float y = 100,
+        [Description("Canvas X position in pixels.")] int x = 100,
+        [Description("Canvas Y position in pixels.")] int y = 100,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true,
         [Description("Also match obsolete/hidden components by name (a Guid always works). Default false.")] bool includeDeprecated = false)
     {
@@ -51,7 +51,7 @@ internal static class GH1_PlaceComponentTool
         };
     }
 
-    private static IToolResult PlaceResolved(GH_Document doc, IGH_ObjectProxy proxy, string selector, float x, float y, bool solve)
+    private static IToolResult PlaceResolved(GH_Document doc, IGH_ObjectProxy proxy, string selector, int x, int y, bool solve)
     {
         IGH_DocumentObject? obj = proxy.CreateInstance();
         if (obj is null)
@@ -59,7 +59,7 @@ internal static class GH1_PlaceComponentTool
         return PlaceObject(doc, obj, selector, x, y, solve);
     }
 
-    private static IToolResult PlaceObject(GH_Document doc, IGH_DocumentObject obj, string selector, float x, float y, bool solve)
+    private static IToolResult PlaceObject(GH_Document doc, IGH_DocumentObject obj, string selector, int x, int y, bool solve)
     {
         if (obj.Attributes is null)
             obj.CreateAttributes();
