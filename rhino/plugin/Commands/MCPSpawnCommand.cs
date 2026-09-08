@@ -20,7 +20,7 @@ public class MCPSpawnCommand : Command
         string? portStr = Environment.GetEnvironmentVariable(PortEnvVar);
         if (!int.TryParse(portStr, out int port) || port < 1 || port > 65535)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] MCPSpawn: {PortEnvVar} not set or invalid (got '{portStr}').");
+            RhinoApp.WriteLine($"[RhinoAI] MCPSpawn: {PortEnvVar} not set or invalid (got '{portStr}').");
             return Result.Failure;
         }
 
@@ -30,7 +30,7 @@ public class MCPSpawnCommand : Command
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] MCPSpawn threw: {ex}");
+            RhinoApp.WriteLine($"[RhinoAI] MCPSpawn threw: {ex}");
             return Result.Failure;
         }
     }

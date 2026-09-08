@@ -133,7 +133,7 @@ internal sealed class ConnectDialog : Dialog
     {
         Label help = new()
         {
-            Text = "Add or remove the Rhino MCP server for any agent detected on this machine. Detected agents "
+            Text = "Add or remove the RhinoAI MCP server for any agent detected on this machine. Detected agents "
                 + "show an Install button; connected ones show an Uninstall button.",
             Wrap = WrapMode.Word,
             TextColor = Colors.Gray,
@@ -199,7 +199,7 @@ internal sealed class ConnectDialog : Dialog
             if (result is McpClientConfigInstaller.McpInstallResult.Unsupported or McpClientConfigInstaller.McpInstallResult.Failed)
                 MessageBox.Show(
                     this,
-                    $"Couldn't add the Rhino MCP server to {client.DisplayName}. Its config may be in a shape we can't safely edit; "
+                    $"Couldn't add the RhinoAI MCP server to {client.DisplayName}. Its config may be in a shape we can't safely edit; "
                         + "use the mcp.json tab to add it by hand.",
                     "Install",
                     MessageBoxButtons.OK,
@@ -218,7 +218,7 @@ internal sealed class ConnectDialog : Dialog
             if (result is McpClientConfigInstaller.McpUninstallResult.Unsupported or McpClientConfigInstaller.McpUninstallResult.Failed)
                 MessageBox.Show(
                     this,
-                    $"Couldn't remove the Rhino MCP server from {client.DisplayName}. Its config may be in a shape we can't safely edit; "
+                    $"Couldn't remove the RhinoAI MCP server from {client.DisplayName}. Its config may be in a shape we can't safely edit; "
                         + "remove the rhino entry by hand.",
                     "Uninstall",
                     MessageBoxButtons.OK,
@@ -284,7 +284,7 @@ internal sealed class ConnectDialog : Dialog
     }
 
     private static string Prompt(IReadOnlyDictionary<string, string> env) =>
-$@"Install the Rhino MCP server. The entry is:
+$@"Install the RhinoAI MCP server. The entry is:
 
 {RouterMcpConfig.EntryFragment(env)}
 

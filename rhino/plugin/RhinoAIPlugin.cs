@@ -84,7 +84,7 @@ public class RhinoAIPlugin : PlugIn
 
         if (!RhinoAIHost.TryGetNextPort(out int port))
         {
-            RhinoApp.WriteLine("The Rhino MCP Server failed to start: no free port available.");
+            RhinoApp.WriteLine("RhinoAI's MCP server failed to start: no free port available.");
             return;
         }
 
@@ -92,8 +92,6 @@ public class RhinoAIPlugin : PlugIn
         {
             if (RhinoAIHost.StartOrRestart(e.Document, port, true))
             {
-                RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
-
                 ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
                 return;
@@ -103,7 +101,7 @@ public class RhinoAIPlugin : PlugIn
         {
         }
 
-        RhinoApp.WriteLine("The Rhino MCP Server failed to start");
+        RhinoApp.WriteLine("RhinoAI's MCP Server failed to start");
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;

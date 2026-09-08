@@ -2,7 +2,7 @@ namespace RhinoAI;
 
 // Shared system-prompt steering for agents whose CLI lets us inject one (Claude, Codex). The
 // built-in AskUserQuestion needs an interactive frontend we don't have in headless stdio mode, so
-// steer every agent to the Rhino MCP tool that renders on the command line and in the panel instead.
+// steer every agent to the RhinoAI MCP tool that renders on the command line and in the panel instead.
 internal static class AgentPrompts
 {
     public static string AskUserSteer =>

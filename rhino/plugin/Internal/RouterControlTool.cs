@@ -99,7 +99,7 @@ internal static class RouterControlTool
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to discard orphaned spawn doc: {ex.Message}");
+            RhinoApp.WriteLine($"[RhinoAI] Failed to discard orphaned spawn doc: {ex.Message}");
             return;
         }
 
@@ -143,7 +143,7 @@ internal static class RouterControlTool
             }
             catch (Exception ex)
             {
-                RhinoApp.WriteLine($"[Rhino MCP] _Exit dispatch failed: {ex.Message}");
+                RhinoApp.WriteLine($"[RhinoAI] _Exit dispatch failed: {ex.Message}");
             }
         });
         return Success(new { scheduled = true });

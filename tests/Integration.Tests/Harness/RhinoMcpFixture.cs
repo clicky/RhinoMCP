@@ -5,7 +5,7 @@ using ModelContextProtocol.Protocol;
 
 namespace RhinoAI.Integration.Tests.Harness;
 
-// One-stop harness for ngentic-style fixtures that drive the rhino MCP:
+// One-stop harness for ngentic-style fixtures that drive the mcp:
 // spawns the freshly-built router in an isolated TMPDIR, hands back the tool
 // list as AITool instances (ready to drop into ChatOptions.Tools), and exposes
 // the handful of slot-management calls a fixture wants to make outside the

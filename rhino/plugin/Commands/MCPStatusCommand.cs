@@ -14,11 +14,11 @@ public class MCPStatusCommand : Command
     {
         if (RhinoAIHost.TryGetPortFor(doc, out int port))
         {
-            RhinoApp.WriteLine($"[Rhino MCP] MCP server running on http://localhost:{port}/");
+            RhinoApp.WriteLine($"[RhinoAI] MCP server running on http://localhost:{port}/");
             return Result.Success;
         }
 
-        RhinoApp.WriteLine("[Rhino MCP] No MCP server running for this document.");
+        RhinoApp.WriteLine("[RhinoAI] No MCP server running for this document.");
 
         GetOption go = new();
         go.SetCommandPrompt("Would you like to start one?");
@@ -29,7 +29,7 @@ public class MCPStatusCommand : Command
 
         if (!RhinoAIHost.TryGetNextPort(out int nextPort))
         {
-            RhinoApp.WriteLine("[Rhino MCP] Failed to start: no free port available.");
+            RhinoApp.WriteLine("[RhinoAI] Failed to start: no free port available.");
             return Result.Failure;
         }
 

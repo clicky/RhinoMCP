@@ -8,7 +8,7 @@ namespace RhinoAI;
 
 // The client half of an ACP connection for an in-Rhino agent: turns the agent's session/update
 // stream into Conversation events, auto-grants tool permission (the only tools are the trusted
-// rhino MCP server), and denies filesystem/terminal access (the agent operates only on this doc).
+// RhinoAI MCP server), and denies filesystem/terminal access (the agent operates only on this doc).
 internal sealed class RhinoAcpClient : IAcpClient
 {
     private Conversation Conversation { get; }
@@ -32,7 +32,7 @@ internal sealed class RhinoAcpClient : IAcpClient
         return default;
     }
 
-    // We trust the rhino MCP tools, so pick an allow option (fallback: the first option) and select
+    // We trust the RhinoAI MCP tools, so pick an allow option (fallback: the first option) and select
     // it. With no options at all the turn was cancelled.
     public ValueTask<RequestPermissionResponse> SessionRequestPermissionAsync(RequestPermissionRequest request, CancellationToken cancellationToken = default)
     {
