@@ -58,7 +58,7 @@ export function emptyState(ctx: PanelContext): Child {
             {
               class: 'starter',
               type: 'button',
-              onClick: () => ctx.openLink('https://developer.rhino3d.com/guides/rhinoai/getting-started/'),
+              onClick: () => ctx.openLink('https://mcneel.github.io/RhinoAI/'),
             },
             icon('reveal', 15),
             el('span', { text: 'Read the setup guide' }),
