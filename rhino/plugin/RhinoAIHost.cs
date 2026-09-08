@@ -45,18 +45,18 @@ internal static class RhinoAIHost
         int? wanted = PortFreedByLastClose;
         if (!TryGetReplacementPort(out int port))
         {
-            RhinoApp.WriteLine("[Rhino MCP] No free port available; the MCP server did not restart.");
+            RhinoApp.WriteLine("[RhinoAI] No free port available; the MCP server did not restart.");
             return;
         }
 
         if (!Start(e.Document, port))
         {
-            RhinoApp.WriteLine($"[Rhino MCP] The MCP server failed to restart on port {port}.");
+            RhinoApp.WriteLine($"[RhinoAI] The MCP server failed to restart on port {port}.");
             return;
         }
 
         if (wanted is int previous && previous != port)
-            RhinoApp.WriteLine($"[Rhino MCP] Port {previous} was unavailable; MCP server moved to http://localhost:{port}/");
+            RhinoApp.WriteLine($"[RhinoAI] Port {previous} was unavailable; MCP server moved to http://localhost:{port}/");
     }
 
     private static bool TryGetReplacementPort(out int port)
@@ -191,13 +191,13 @@ internal static class RhinoAIHost
             {
                 if (!quiet)
                 {
-                    RhinoApp.WriteLine($"[Rhino MCP] Failed to bind port {port}.");
+                    RhinoApp.WriteLine($"[RhinoAI] Failed to bind port {port}.");
                 }
                 return false;
             }
             if (!quiet)
             {
-                RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
+                RhinoApp.WriteLine($"[RhinoAI] Restarted on http://localhost:{port}/");
             }
             return true;
         }
@@ -207,7 +207,7 @@ internal static class RhinoAIHost
 
         if (!quiet)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
+            RhinoApp.WriteLine($"[RhinoAI] MCP server failed to start. Try a different port.");
         }
         return false;
     }
@@ -263,7 +263,7 @@ internal static class RhinoAIHost
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to write listener announcement: {ex.Message}");
+            RhinoApp.WriteLine($"[RhinoAI] Failed to write listener announcement: {ex.Message}");
         }
     }
 
@@ -290,7 +290,7 @@ internal static class RhinoAIHost
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to write listener departure: {ex.Message}");
+            RhinoApp.WriteLine($"[RhinoAI] Failed to write listener departure: {ex.Message}");
         }
     }
 
@@ -340,7 +340,7 @@ internal static class RhinoAIHost
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] Slot doc close failed for port {port}: {ex.Message}");
+            RhinoApp.WriteLine($"[RhinoAI] Slot doc close failed for port {port}: {ex.Message}");
             return true;
         }
 

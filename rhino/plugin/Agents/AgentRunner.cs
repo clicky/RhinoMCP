@@ -7,7 +7,7 @@ namespace RhinoAI;
 
 // Drives any ACP agent (a native connection like Gemini, or a StreamJsonAgent wrapping a stream-json
 // CLI like Claude/Codex) behind the plugin's IAgentRunner seam. One ACP session per agent instance:
-// the first prompt initializes the connection and opens a session pointed at this doc's rhino MCP
+// the first prompt initializes the connection and opens a session pointed at this doc's MCP
 // server; later prompts reuse it. Streaming arrives out-of-band through RhinoAcpClient on the
 // connection's read loop; the prompt response ends the turn.
 internal sealed class AgentRunner : IAgentRunner

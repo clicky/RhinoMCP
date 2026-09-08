@@ -12,7 +12,7 @@ public sealed class PluginNotInstalledException(string version, IReadOnlyList<st
         string where = versionsWithPlugin.Count > 0
             ? $"It is installed for: {string.Join(", ", versionsWithPlugin)}. "
             : "No installed Rhino has it. ";
-        return $"The Rhino MCP plugin is not installed for Rhino {version}. {where}" +
+        return $"The RhinoAI plugin is not installed for Rhino {version}. {where}" +
                $"Install it for the Rhino you want to use, then retry. Setup guide: {SetupDocsUrl}";
     }
 }

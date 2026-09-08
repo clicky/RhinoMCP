@@ -35,14 +35,16 @@ internal static class ScriptingEnvironment
         {
             if (StartedPython) return;
             StartedPython = true;
-            RhinoApp.WriteLine("Loading Python 3 for Script Server");
+            // TODO : Make this a debug line
+            // RhinoApp.WriteLine("Loading Python 3 for Script Server");
         }
 
         if (spec == LanguageSpec.CSharp)
         {
             if (StartedCsharp) return;
             StartedCsharp = true;
-            RhinoApp.WriteLine("Loading C# for Script Server");
+            // TODO : Make this a debug line
+            // RhinoApp.WriteLine("Loading C# for Script Server");
         }
 
         try

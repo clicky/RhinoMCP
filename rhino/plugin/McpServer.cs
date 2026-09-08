@@ -49,12 +49,12 @@ internal sealed class McpServer : IDisposable
 
             _ = App.RunAsync(Cts.Token);
 
-            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
+            RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
             return true;
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to start: {DescribeException(ex)}");
+            RhinoApp.WriteLine($"[RhinoAI] Failed to start: {DescribeException(ex)}");
             App = null;
             return false;
         }

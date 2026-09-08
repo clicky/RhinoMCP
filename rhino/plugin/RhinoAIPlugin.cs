@@ -2,12 +2,14 @@ using System.IO;
 using System.Reflection;
 
 using Rhino.PlugIns;
+using Rhino.Runtime;
 
 namespace RhinoAI;
 
 public class RhinoAIPlugin : PlugIn
 {
-    private const string IconResourceName = "RhinoAI.logo.svg";
+    private const string IconResourceName = "RhinoAI.logo.ico";
+    private const string DarkIconResourceName = "RhinoAI.logo-dark.ico";
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 
@@ -38,17 +40,13 @@ public class RhinoAIPlugin : PlugIn
         try
         {
             Assembly assembly = typeof(RhinoAIPlugin).Assembly;
-            using Stream? stream = assembly.GetManifestResourceStream(IconResourceName);
-            if (stream is null)
+
+            string resourceName = HostUtils.RunningInDarkMode ? DarkIconResourceName : IconResourceName;
+            using Stream? resourceStream = assembly.GetManifestResourceStream(resourceName);
+            if (resourceStream is null)
                 return null;
 
-            using StreamReader reader = new(stream);
-            string svg = reader.ReadToEnd();
-
-            var size = Rhino.UI.Panels.IconSizeInPixels;
-            int pixels = size.Width > 0 ? size.Width : 36;
-            using System.Drawing.Bitmap bitmap = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, pixels, pixels, adjustForDarkMode: true);
-            return System.Drawing.Icon.FromHandle(bitmap.GetHicon());
+            return new System.Drawing.Icon(resourceStream);
         }
         catch
         {
@@ -82,7 +80,7 @@ public class RhinoAIPlugin : PlugIn
 
         if (!RhinoAIHost.TryGetNextPort(out int port))
         {
-            RhinoApp.WriteLine("The Rhino MCP Server failed to start: no free port available.");
+            RhinoApp.WriteLine("RhinoAI's MCP server failed to start: no free port available.");
             return;
         }
 
@@ -90,8 +88,6 @@ public class RhinoAIPlugin : PlugIn
         {
             if (RhinoAIHost.StartOrRestart(e.Document, port, true))
             {
-                RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
-
                 ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
                 return;
@@ -101,7 +97,7 @@ public class RhinoAIPlugin : PlugIn
         {
         }
 
-        RhinoApp.WriteLine("The Rhino MCP Server failed to start");
+        RhinoApp.WriteLine("RhinoAI's MCP Server failed to start");
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;

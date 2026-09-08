@@ -20,9 +20,9 @@ internal sealed class RhinoLoggerProvider : ILoggerProvider
         {
             if (!IsEnabled(logLevel)) return;
             string msg = formatter(state, exception);
-            RhinoApp.WriteLine($"[Rhino MCP][{logLevel}] {Category}: {msg}");
+            RhinoApp.WriteLine($"[RhinoAI][{logLevel}] {Category}: {msg}");
             if (exception is not null)
-                RhinoApp.WriteLine($"[Rhino MCP]   {exception.GetType().Name}: {exception.Message}\n{exception.StackTrace}");
+                RhinoApp.WriteLine($"[RhinoAI]   {exception.GetType().Name}: {exception.Message}\n{exception.StackTrace}");
         }
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;

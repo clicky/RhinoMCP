@@ -2,7 +2,7 @@ using System.IO;
 
 namespace RhinoAI;
 
-// Adds the bundled rhino MCP server to the configs of MCP-aware tools the user has (Claude Code,
+// Adds the bundled MCP server to the configs of MCP-aware tools the user has (Claude Code,
 // Cursor, Codex, ...) so those external agents can drive Rhino without hand-copying the snippet.
 // Detection and install are per-client and user-initiated from the Connect dialog's Install tab.
 // We never create configs for tools the user doesn't run (that would litter the home dir), and
@@ -67,7 +67,7 @@ internal static class McpClientConfigInstaller
                 return McpInstallResult.Unsupported;
 
             WriteAtomic(path, updated);
-            Log($"wired the Rhino MCP server into {client.DisplayName} ({path})");
+            Log($"wired the RhinoAI MCP server into {client.DisplayName} ({path})");
             return McpInstallResult.Installed;
         }
         catch (Exception ex)
@@ -94,12 +94,12 @@ internal static class McpClientConfigInstaller
                 return McpUninstallResult.Unsupported;
 
             WriteAtomic(path, updated);
-            Log($"removed the Rhino MCP server from {client.DisplayName} ({path})");
+            Log($"Removed the RhinoAI MCP server from {client.DisplayName} ({path})");
             return McpUninstallResult.Uninstalled;
         }
         catch (Exception ex)
         {
-            Log($"failed to update {client.DisplayName}: {ex.Message}");
+            Log($"Failed to update {client.DisplayName}: {ex.Message}");
             return McpUninstallResult.Failed;
         }
     }
@@ -127,7 +127,7 @@ internal static class McpClientConfigInstaller
     {
         try
         {
-            RhinoApp.WriteLine($"[Rhino MCP] {message}");
+            RhinoApp.WriteLine($"[RhinoAI] {message}");
         }
         catch
         {
