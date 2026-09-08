@@ -107,6 +107,8 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
             Uri scriptUri = new(Path.Combine(Paths.Directory, $"{commandName}.py"));
 
+            Paths.Directory.EnsureDirectory();
+
             EnsurePython3Header(ref script);
 
             SourceCode validate = new(LanguageSpec.Python3, script);
