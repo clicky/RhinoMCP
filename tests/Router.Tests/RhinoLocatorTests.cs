@@ -8,14 +8,14 @@ public class RhinoLocatorTests
 {
     // Regression for the conflated token-to-install mapping: the tokens the
     // locator advertises must be exactly the ones the header documents ("8",
-    // "9", "WIP") and nothing else. Previously ListInstalledVersions probed
+    // "9", "BETA", "WIP") and nothing else. Previously ListInstalledVersions probed
     // undocumented "10"/"11"/"12" that no branch could ever resolve. Compared
     // as a set so the assertion pins the token membership, not Dictionary
     // insertion-order preservation (not a documented CLR guarantee).
     [Test]
     public void Advertises_exactly_the_documented_version_tokens()
     {
-        Assert.That(RhinoLocator.KnownVersionTokens, Is.EquivalentTo(new[] { "8", "9", "WIP" }));
+        Assert.That(RhinoLocator.KnownVersionTokens, Is.EquivalentTo(new[] { "8", "9", "BETA", "WIP" }));
     }
 
     [Test]
