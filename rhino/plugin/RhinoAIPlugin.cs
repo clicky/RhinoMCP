@@ -3,12 +3,14 @@ using System.IO;
 using System.Reflection;
 
 using Rhino.PlugIns;
+using Rhino.Runtime;
 
 namespace RhinoAI;
 
 public class RhinoAIPlugin : PlugIn
 {
-    private const string IconResourceName = "RhinoAI.logo.svg";
+    private const string IconResourceName = "RhinoAI.logo.ico";
+    private const string DarkIconResourceName = "RhinoAI.logo-dark.ico";
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 
@@ -40,17 +42,13 @@ public class RhinoAIPlugin : PlugIn
         try
         {
             Assembly assembly = typeof(RhinoAIPlugin).Assembly;
-            using Stream? stream = assembly.GetManifestResourceStream(IconResourceName);
-            if (stream is null)
+
+            string resourceName = HostUtils.RunningInDarkMode ? DarkIconResourceName : IconResourceName;
+            using Stream? resourceStream = assembly.GetManifestResourceStream(resourceName);
+            if (resourceStream is null)
                 return null;
 
-            using StreamReader reader = new(stream);
-            string svg = reader.ReadToEnd();
-
-            var size = Rhino.UI.Panels.IconSizeInPixels;
-            int pixels = size.Width > 0 ? size.Width : 36;
-            using System.Drawing.Bitmap bitmap = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, pixels, pixels, adjustForDarkMode: true);
-            return System.Drawing.Icon.FromHandle(bitmap.GetHicon());
+            return new System.Drawing.Icon(resourceStream);
         }
         catch
         {
