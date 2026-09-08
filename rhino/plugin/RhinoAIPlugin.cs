@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.IO;
 using System.Reflection;
 
@@ -14,14 +13,13 @@ public class RhinoAIPlugin : PlugIn
 
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
-        RhinoDoc.NewDocument += Register;
-        RhinoDoc.EndOpenDocument += RegisterOpen;
+        if (AIAutoLoad.ShouldAutoLoad())
+        {
+            RhinoDoc.NewDocument += Register;
+            RhinoDoc.EndOpenDocument += RegisterOpen;
 
-        CommandInterceptors = new CommandInterceptorHost();
-
-        // Probe agent install paths once on load so the active agent resolves before the first
-        // prompt; Part 1's settings dialog re-runs this when the agent config changes.
-        AgentRegistry.Refresh();
+            CommandInterceptors = new CommandInterceptorHost();
+        }
 
         Rhino.UI.Panels.RegisterPanel(this, typeof(AIPanel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
         return base.OnLoad(ref errorMessage);
@@ -72,7 +70,7 @@ public class RhinoAIPlugin : PlugIn
     }
 
     private void Register(object? sender, DocumentEventArgs e)
-    {   
+    {
         RhinoDoc.NewDocument -= Register;
         RhinoDoc.EndOpenDocument -= RegisterOpen;
 
