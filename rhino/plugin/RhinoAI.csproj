@@ -76,9 +76,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhinoAI.logo.svg" />
-    <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhinoAI.copy.svg" />
-    <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhinoAI.paperclip.svg" />
+    <EmbeddedResource Include="../../art/*.svg" />
+    <EmbeddedResource Include="../../art/*.ico" />
     <!-- The web panel, built from rhino/panel. Committed so a build needs no Node toolchain; the
          RebuildAIPanel target below refreshes it when one is present. -->
     <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="RhinoAI.panel.html" />

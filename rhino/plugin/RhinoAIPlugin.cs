@@ -9,8 +9,8 @@ namespace RhinoAI;
 
 public class RhinoAIPlugin : PlugIn
 {
-    private const string IconResourceName = "RhinoAI.logo.ico";
-    private const string DarkIconResourceName = "RhinoAI.logo-dark.ico";
+    private const string IconResourceName = "RhinoAI.Panel_dark.ico";
+    private const string DarkIconResourceName = "RhinoAI.Panel_dark.ico";
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 
