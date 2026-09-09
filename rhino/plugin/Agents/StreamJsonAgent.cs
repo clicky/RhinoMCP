@@ -173,7 +173,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
 
     private Task StartAsync()
     {
-        if (!CliProcess.TryResolve(Definition.SearchPaths, out string path))
+        if (!CliProcess.TryResolve(Definition.AgentPaths, out string path))
             throw new FileNotFoundException(Parser.NotFoundMessage);
 
         ProcessStartInfo psi = new()
