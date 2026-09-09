@@ -8,61 +8,56 @@ using ContentBlock = Acp.ContentBlock; // disambiguate from RhinoAI.Server.Conte
 
 namespace RhinoAI;
 
-// The Codex CLI (`codex exec`) stream-json strategy: turns one Codex stdout line into ACP
-// session/update events and frames one user turn for stdin. Owns no process/threads/turn gating (the
-// runner does); stays RhinoApp- and AISettings-free so it Compile Include's into a test project. Model,
-// extra args and the system prompt come from the ctor-injected Definition; the MCP server set is
-// resolved by the runner and handed in per spawn.
-//
-// CONTRACT NOTE (deferred live check): the Codex CLI is not present in this environment, so the
-// launch/parse shape below is correct-by-construction and headlessly tested, NOT validated against the
-// shipped binary. Each formerly-doubtful flag/field is now a single documented default, sourced inline.
-// If the installed `codex` differs, only ConfigureArguments here changes; the runner and ACP seam are
-// untouched. The defaults to confirm on a real machine: `--experimental-json`,
-// `-c mcp_servers.rhino.{url,type,tool_timeout_sec}`, `experimental_instructions`,
-// `--resume`/`--session-id`.
+// Verified against codex-cli 0.153.4. Static settings live in CODEX_HOME's config.toml, not in flags, because `codex exec resume` takes neither --approve-for-me nor --profile: a flag-based setup works on turn one and silently stops on turn two.
 internal sealed class CodexStreamJsonParser : IStreamJsonParser
 {
     private AgentDefinition Definition { get; }
+    private string CodexHome { get; }
 
-    public CodexStreamJsonParser(AgentDefinition definition)
+    public CodexStreamJsonParser(AgentDefinition definition, string codexHome)
     {
         Definition = definition;
+        CodexHome = codexHome;
     }
 
     public string DisplayName => Definition.Name;
 
     public string NotFoundMessage => "Codex CLI not found. Install Codex (npm i -g @openai/codex).";
 
+    public bool IsOneTurnPerProcess => true;
+
+    public IReadOnlyList<string> AuthStatusArguments => ["login", "status"];
+
+    public IReadOnlyList<string> LoginArguments => ["login"];
+
+    // `codex login status` answers in prose ("Logged in using ChatGPT"), so the negative is tested
+    // first: "not logged in" contains "logged in".
+    public CliLogin.State ReadAuthState(string output, int exitCode)
+    {
+        if (output.Contains("not logged in", StringComparison.OrdinalIgnoreCase))
+            return CliLogin.State.SignedOut;
+        if (exitCode == 0 && output.Contains("logged in", StringComparison.OrdinalIgnoreCase))
+            return CliLogin.State.SignedIn;
+        return CliLogin.State.Unknown;
+    }
+
     public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
     {
-        psi.ArgumentList.Add("exec"); // non-interactive run; prompt arrives on stdin
-        // Codex emits its JSON event stream under --experimental-json (the event envelope is {msg:{type}}).
-        psi.ArgumentList.Add("--experimental-json");
-        psi.ArgumentList.Add("-"); // read the prompt from stdin
+        psi.Environment["CODEX_HOME"] = CodexHome;
 
-        // Register Rhino as an MCP server via -c config override; Codex's [mcp_servers] table takes a
-        // streamable-http server keyed by name, with .url and .type ("http"). rhino points at this doc's
-        // HTTP listener (not the router) so the agent always operates on the exact doc.
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"mcp_servers.rhino.url=\"{mcpUrl}\"");
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add("mcp_servers.rhino.type=\"http\"");
+        psi.ArgumentList.Add("exec");
+        if (resume)
+        {
+            psi.ArgumentList.Add("resume");
+            psi.ArgumentList.Add(agentSessionId);
+        }
 
-        // Raise the rhino server's per-tool-call timeout to one hour so a genuinely slow tool (a heavy
-        // geometry op, a long script) isn't aborted at a short default. Codex's [mcp_servers.<name>]
-        // table takes tool_timeout_sec (SECONDS, unlike Claude's MCP_TOOL_TIMEOUT milliseconds), set
-        // here via -c on the rhino server. (ask_user no longer needs this: it returns immediately and
-        // the answer arrives as the next prompt, so it never holds a tool call open.) GAP: Codex
-        // exposes no MCP-tool-timeout ENV var to mirror, and the CLI is not present in this
-        // environment, so the key name/units are correct-by-construction (see the CONTRACT NOTE
-        // above), not validated against the shipped binary.
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add("mcp_servers.rhino.tool_timeout_sec=3600");
+        psi.ArgumentList.Add("--json");
+        psi.ArgumentList.Add("--skip-git-repo-check");
 
-        // Extra servers the runner resolved (a JSON-object string of name -> server-config), translated
-        // to -c overrides beside rhino. rhino is never overwritten: those tools are the agent's hands on
-        // this exact doc. Each server's fields become -c mcp_servers.<name>.<key>=<value>.
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add($"mcp_servers.rhino.url={EncodeString(mcpUrl)}");
+
         foreach (string entry in mcpServers)
         {
             if (JsonNode.Parse(entry) is not JsonObject servers)
@@ -77,40 +72,32 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
                         psi.ArgumentList.Add("-c");
                         psi.ArgumentList.Add($"mcp_servers.{server.Key}.{field.Key}={EncodeValue(value)}");
                     }
+                // Without this every call to a user-added server dies on "approval policy is never", the same pre-approval the shipped config gives rhino.
+                psi.ArgumentList.Add("-c");
+                psi.ArgumentList.Add($"mcp_servers.{server.Key}.default_tools_approval_mode=\"approve\"");
             }
         }
 
-        // The composed system prompt (shared ask_user steer + this agent's SystemPrompt) goes through
-        // Codex's experimental_instructions -c key. Always non-empty because the steer is always present.
         psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"experimental_instructions={EncodeString(AgentPrompts.Compose(Definition.SystemPrompt))}");
+        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(Definition.SystemPrompt))}");
 
-        // Resume the same conversation across respawns (--resume) rather than re-opening fresh
-        // (--session-id), keyed off the runner's sticky resume flag.
-        psi.ArgumentList.Add(resume ? "--resume" : "--session-id");
-        psi.ArgumentList.Add(agentSessionId);
-
-        // Built-in defaults set Model="" / ExtraArgs=[], so these append nothing; custom entries layer
-        // their model/args on top via the model -c key.
         if (Definition.Model.Length > 0)
         {
-            psi.ArgumentList.Add("-c");
-            psi.ArgumentList.Add($"model=\"{Definition.Model}\"");
+            psi.ArgumentList.Add("-m");
+            psi.ArgumentList.Add(Definition.Model);
         }
         foreach (string arg in Definition.ExtraArgs)
             psi.ArgumentList.Add(arg);
+
+        psi.ArgumentList.Add("-"); // the positional PROMPT, so it has to stay last
     }
 
-    // A Codex -c value: strings get TOML-style double-quoting; numbers/bools pass through bare.
     private static string EncodeValue(JsonValue value) =>
         value.TryGetValue(out string? text) ? EncodeString(text) : value.ToJsonString();
 
     private static string EncodeString(string text) =>
         "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n") + "\"";
 
-    // Codex `exec -` consumes a plain-text prompt from stdin (no JSON envelope). The agent has no
-    // filesystem access, so text files are inlined fenced; images degrade to a short note since this path
-    // has no inline-image support.
     public string FormatTurn(IReadOnlyList<ContentBlock> prompt)
     {
         StringBuilder builder = new();
@@ -131,38 +118,83 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         return builder.ToString();
     }
 
-    // Codex frames each event as a top-level object carrying a `msg` payload whose `type` names the
-    // event (session_configured, agent_message, mcp_tool_call, task_complete, etc.).
     public ParsedLine Parse(string line)
     {
         using JsonDocument doc = JsonDocument.Parse(line);
         JsonElement root = doc.RootElement;
-
-        // Events nest under `msg`; fall back to root for shapes that carry `type` directly.
-        JsonElement msg = root.TryGetProperty("msg", out JsonElement m) ? m : root;
-        if (!msg.TryGetProperty("type", out JsonElement typeEl))
+        if (!root.TryGetProperty("type", out JsonElement typeEl))
             return ParsedLine.None;
 
-        // Unknown event types fall through to ParsedLine.None on purpose: Codex carries event kinds we
-        // do not translate, and a new one must never fault the turn. Deliberate fail-soft, not a discard.
-        // session_configured is intentionally None: session-start is the runner's NoteSessionStarted
-        // concern, not the parser's.
+        // Unknown types fail soft: turn.started, item.updated, reasoning and command/web items all land here, and a new one must never fault the turn.
         return typeEl.GetString() switch
         {
-            "agent_message" => EmitAssistant(msg),
-            "mcp_tool_call" => EmitToolCall(msg),
-            "task_complete" => ParsedLine.Complete(StopReason.EndTurn, ReadUsage(msg)), // the terminal event ends the turn
+            "thread.started" => EmitSession(root),
+            "item.started" => EmitItemStarted(root),
+            "item.completed" => EmitItemCompleted(root),
+            "turn.completed" => ParsedLine.Complete(StopReason.EndTurn, ReadUsage(root)),
+            "turn.failed" => ParsedLine.Complete(StopReason.Refusal),
             _ => ParsedLine.None,
         };
     }
 
-    // CONTRACT NOTE (deferred live check): Codex's token accounting field on task_complete is not
-    // validated against the shipped binary. The default assumed here is a `usage` object with
-    // input_tokens/output_tokens; cost is not reported by Codex, so it stays null (tokens only).
-    // Best-effort: a task_complete without usage degrades to TokenUsage.Empty, never faulting the turn.
-    private static TokenUsage ReadUsage(JsonElement msg)
+    private static ParsedLine EmitSession(JsonElement root) =>
+        TryStr(root, "thread_id", out string threadId) ? ParsedLine.Session(threadId) : ParsedLine.None;
+
+    private static ParsedLine EmitItemStarted(JsonElement root)
     {
-        if (!msg.TryGetProperty("usage", out JsonElement usage) || usage.ValueKind != JsonValueKind.Object)
+        if (!TryItem(root, out JsonElement item) || Str(item, "type") != "mcp_tool_call")
+            return ParsedLine.None;
+        if (!TryStr(item, "id", out string toolCallId))
+            return ParsedLine.None;
+
+        return ParsedLine.Emit(new ToolCallSessionUpdate
+        {
+            ToolCallId = toolCallId,
+            Title = Str(item, "tool"),
+            RawInput = item.TryGetProperty("arguments", out JsonElement args) ? args.Clone() : null,
+        });
+    }
+
+    private static ParsedLine EmitItemCompleted(JsonElement root)
+    {
+        if (!TryItem(root, out JsonElement item))
+            return ParsedLine.None;
+
+        return Str(item, "type") switch
+        {
+            "agent_message" => EmitAssistant(item),
+            "mcp_tool_call" => EmitToolResult(item),
+            _ => ParsedLine.None,
+        };
+    }
+
+    private static ParsedLine EmitAssistant(JsonElement item) =>
+        TryStr(item, "text", out string text)
+            ? ParsedLine.Emit(new AgentMessageChunkSessionUpdate { Content = new TextContentBlock { Text = text } })
+            : ParsedLine.None;
+
+    private static ParsedLine EmitToolResult(JsonElement item)
+    {
+        if (!TryStr(item, "id", out string toolCallId))
+            return ParsedLine.None;
+
+        // A failure carries `error` where a success carries `result`, and the chip only renders with non-null output.
+        bool failed = Str(item, "status") != "completed";
+        JsonElement? output = item.TryGetProperty(failed ? "error" : "result", out JsonElement payload) && payload.ValueKind != JsonValueKind.Null
+            ? payload.Clone()
+            : null;
+
+        return ParsedLine.Emit(new ToolCallUpdateSessionUpdate
+        {
+            ToolCallId = toolCallId,
+            Status = failed ? ToolCallStatus.Failed : ToolCallStatus.Completed,
+            RawOutput = output,
+        });
+    }
+
+    private static TokenUsage ReadUsage(JsonElement root)
+    {
+        if (!root.TryGetProperty("usage", out JsonElement usage) || usage.ValueKind != JsonValueKind.Object)
             return TokenUsage.Empty;
         return new TokenUsage(ReadInt(usage, "input_tokens"), ReadInt(usage, "output_tokens"), null);
     }
@@ -170,21 +202,12 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
     private static int ReadInt(JsonElement obj, string name) =>
         obj.TryGetProperty(name, out JsonElement el) && el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out int v) ? v : 0;
 
-    // Assistant text rides directly on the event under `message`.
-    private static ParsedLine EmitAssistant(JsonElement msg) =>
-        TryStr(msg, "message", out string text)
-            ? ParsedLine.Emit(new AgentMessageChunkSessionUpdate { Content = new TextContentBlock { Text = text } })
-            : ParsedLine.None;
+    private static bool TryItem(JsonElement root, out JsonElement item) =>
+        root.TryGetProperty("item", out item) && item.ValueKind == JsonValueKind.Object;
 
-    // A tool call carries the invoked tool name under `tool`; it doubles as the correlation id, so an
-    // absent name skips the update rather than emitting a chip keyed on "".
-    private static ParsedLine EmitToolCall(JsonElement msg) =>
-        TryStr(msg, "tool", out string name)
-            ? ParsedLine.Emit(new ToolCallSessionUpdate { ToolCallId = name, Title = name })
-            : ParsedLine.None;
+    private static string Str(JsonElement obj, string name) =>
+        TryStr(obj, name, out string value) ? value : string.Empty;
 
-    // JSON-boundary string read: false means the field is absent (or not a non-empty string), never a
-    // silent "" sentinel. Codex's id-bearing fields are absence-sensitive, so they all route through here.
     private static bool TryStr(JsonElement obj, string name, out string value)
     {
         if (obj.TryGetProperty(name, out JsonElement el) && el.ValueKind == JsonValueKind.String && el.GetString() is { Length: > 0 } s)

@@ -9,7 +9,7 @@ internal sealed record AgentDefinition(
     string Name,
     AgentAdapter Adapter,
     string Command,
-    IReadOnlyList<string> SearchPaths,
+    IReadOnlyList<string> AgentPaths,
     string Model,
     IReadOnlyList<string> ExtraArgs,
     string SystemPrompt,

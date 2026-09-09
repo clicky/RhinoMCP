@@ -268,7 +268,9 @@ internal sealed class AISettingsPanel : Panel
         if (confirm != DialogResult.Yes)
             return;
 
-        row.SearchPathsText = string.Join(Environment.NewLine, AgentRegistry.DefaultSearchPaths(row.Command));
+        AgentRegistry.TryGet(row.Command, out AgentDefinition def);
+
+        row.SearchPathsText = string.Join(Environment.NewLine, def.AgentPaths);
         row.Model = string.Empty;
         row.ExtraArgsText = string.Empty;
         row.SystemPrompt = string.Empty;
@@ -413,11 +415,13 @@ internal sealed class AISettingsPanel : Panel
             _ => name,
         };
 
+        AgentRegistry.TryGet(command, out AgentDefinition def);
+
         AgentRow row = new(
             name: name,
             adapter: adapter,
             command: command,
-            searchPathsText: string.Join(Environment.NewLine, AgentRegistry.DefaultSearchPaths(command)),
+            searchPathsText: string.Join(Environment.NewLine, def.AgentPaths),
             model: string.Empty,
             extraArgsText: string.Empty,
             systemPrompt: string.Empty,
@@ -774,7 +778,7 @@ internal sealed class AISettingsPanel : Panel
                 def.Name,
                 def.Adapter,
                 def.Command,
-                string.Join(Environment.NewLine, def.SearchPaths),
+                string.Join(Environment.NewLine, def.AgentPaths),
                 def.Model,
                 string.Join(Environment.NewLine, def.ExtraArgs),
                 def.SystemPrompt,

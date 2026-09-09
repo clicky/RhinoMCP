@@ -7,7 +7,7 @@ internal static class AgentFactory
     public static IAgentRunner Create(AgentDefinition def, string docTitle) => def.Adapter switch
     {
         AgentAdapter.Claude => new AgentRunner(def, docTitle, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new ClaudeStreamJsonParser(def))),
-        AgentAdapter.Codex => new AgentRunner(def, docTitle, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def))),
+        AgentAdapter.Codex => new AgentRunner(def, docTitle, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def, CodexHome.Prepare()))),
         AgentAdapter.Gemini => new AgentRunner(def, docTitle, (client, _, cwd) => GeminiConnection.Connect(def, client, cwd)),
         _ => throw new ArgumentOutOfRangeException(nameof(def), def.Adapter, "Unknown agent adapter."),
     };
@@ -25,7 +25,7 @@ internal static class AgentFactory
             case AgentAdapter.Claude:
                 return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new ClaudeStreamJsonParser(def), resumeId));
             case AgentAdapter.Codex:
-                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def), resumeId));
+                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def, CodexHome.Prepare()), resumeId));
             case AgentAdapter.Gemini:
                 // No native --resume seam: the prior turns are shown for the user's reference, but the
                 // fresh native session starts with no memory of them. Warn so the user doesn't assume
