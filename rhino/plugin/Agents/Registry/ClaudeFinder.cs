@@ -16,6 +16,7 @@ internal class ClaudeFinder : IAgentFinder
         // Examples I've seen in the wild
         // C:\Users\user\AppData\Roaming\Claude\claude-code\2.1.260\claude.exe
         // C:\Users\user\AppData\Local\Packages\Claude_{gibberish}}\LocalCache\Roaming\Claude\claude-code\2.1.260
+        // C:\Users\sykes\.local\bin\claude.exe
         if (OperatingSystem.IsWindows())
         {
             string claudeDesktopBaseDir = Path.Combine(LOCAL_APPDATA, "Packages");
@@ -48,6 +49,12 @@ internal class ClaudeFinder : IAgentFinder
                     if (!File.Exists(claudeExePath)) continue;
                     paths.Add(claudeExePath);
                 }
+            }
+
+            string claudeCodeCliExe = Path.Combine(USER_PROFILE, ".local", ".bin", "claude.exe");
+            if (File.Exists(claudeCodeCliExe))
+            {
+                paths.Add(claudeCodeCliExe);
             }
         }
         // Mac
