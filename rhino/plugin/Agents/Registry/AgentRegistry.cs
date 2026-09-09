@@ -97,11 +97,16 @@ internal static class AgentRegistry
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (OperatingSystem.IsWindows())
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            yield return Path.Combine(home, ".local", "bin");
-            yield return Path.Combine(appData, "npm");
-            yield return Path.Combine(localAppData, "Microsoft", "WindowsApps");
+            ClaudeFinder finder = new();
+            foreach(string path in finder.Find())
+            {
+                yield return path;
+            }
+            // string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            // string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            // yield return Path.Combine(home, ".local", "bin");
+            // yield return Path.Combine(appData, "npm");
+            // yield return Path.Combine(localAppData, "Microsoft", "WindowsApps");
         }
         else
         {
