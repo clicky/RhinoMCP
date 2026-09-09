@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using RhinoAI.Router;
+using Rhino.AI.Router;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 // Exercises GetOrCreateDefaultAsync, the slot-less resolution ladder
 // (sticky → already-open → own-spawn → cold start). Every reuse branch returns

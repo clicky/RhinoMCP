@@ -3,9 +3,9 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 /// <summary>
 /// Registers all of the MCP Tools

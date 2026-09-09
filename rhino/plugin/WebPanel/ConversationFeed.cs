@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // Translates a Conversation into the panel's incremental event stream.
 //

@@ -5,10 +5,10 @@ using System.Text;
 using Rhino.Runtime.Code;
 using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
-using RhinoAI.ScriptProjects;
-using RhinoAI.Tools;
+using Rhino.AI.ScriptProjects;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 internal class RhinoCodeRunScript : IRhinoCodeRunner
 {

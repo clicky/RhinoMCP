@@ -1,4 +1,4 @@
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // The panel synthesizes "Other" and "I don't know" on every question, so an agent listing them too must not produce two of each.
 [TestFixture]

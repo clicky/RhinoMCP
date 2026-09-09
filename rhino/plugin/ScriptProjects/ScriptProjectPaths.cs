@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 internal sealed record ScriptProjectPaths(string PluginName, string Directory, string BuildDirectory)
 {

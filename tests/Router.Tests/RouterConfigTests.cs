@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using RhinoAI.Router;
+using Rhino.AI.Router;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 [TestFixture]
 public class RouterConfigTests

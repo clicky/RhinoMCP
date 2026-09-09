@@ -31,7 +31,7 @@
     <NoWarn>$(NoWarn);NU1701;CA1416;MSB3277;CS0436</NoWarn>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <RootNamespace>RhinoAI</RootNamespace>
+    <RootNamespace>Rhino.AI</RootNamespace>
     <AssemblyName>RhinoAI</AssemblyName>
   </PropertyGroup>
 
@@ -80,8 +80,8 @@
     <EmbeddedResource Include="../../art/*.ico" />
     <!-- The web panel, built from rhino/panel. Committed so a build needs no Node toolchain; the
          RebuildAIPanel target below refreshes it when one is present. -->
-    <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="RhinoAI.panel.html" />
-    <EmbeddedResource Include="Agents/codex-config.toml" LogicalName="RhinoAI.codex-config.toml" />
+    <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="Rhino.AI.panel.html" />
+    <EmbeddedResource Include="Agents/codex-config.toml" LogicalName="Rhino.AI.codex-config.toml" />
   </ItemGroup>
 
   <!-- Best effort: rebuild the panel bundle when the developer has already run `npm install` in

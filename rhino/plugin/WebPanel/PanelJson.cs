@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 internal static class PanelJson
 {

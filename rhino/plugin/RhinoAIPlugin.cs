@@ -4,12 +4,12 @@ using System.Reflection;
 using Rhino.PlugIns;
 using Rhino.Runtime;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 public class RhinoAIPlugin : PlugIn
 {
-    private const string IconResourceName = "RhinoAI.Panel_dark.ico";
-    private const string DarkIconResourceName = "RhinoAI.Panel_dark.ico";
+    private const string IconResourceName = "Rhino.AI.Panel_dark.ico";
+    private const string DarkIconResourceName = "Rhino.AI.Panel_dark.ico";
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 

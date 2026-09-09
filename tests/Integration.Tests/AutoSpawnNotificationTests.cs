@@ -1,6 +1,6 @@
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Pins the autoSpawnedSlot side-channel contract: when a tool is called without
 // a `slot` argument and the router has to launch a Rhino to serve it, the

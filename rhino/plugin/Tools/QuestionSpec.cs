@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 // One question as the agent asks for it. The ask_user input schema is generated from this record's
 // constructor, so these descriptions are what the agent actually reads.

@@ -1,4 +1,4 @@
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // This string is what the agent reads back as the user's next prompt, so its shape is a contract.
 [TestFixture]

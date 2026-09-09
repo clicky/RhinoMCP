@@ -1,9 +1,9 @@
 #if R9
 using System.Runtime.CompilerServices;
-using RhinoAI.Resources;
-using static RhinoAI.Tools.GetContextTool;
+using Rhino.AI.Resources;
+using static Rhino.AI.Tools.GetContextTool;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 internal static class Grasshopper2
 {

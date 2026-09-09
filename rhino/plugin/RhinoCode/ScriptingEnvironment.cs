@@ -6,7 +6,7 @@ using System.Runtime.ExceptionServices;
 using Rhino.PlugIns;
 using Rhino.Runtime.Code.Languages;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Registrar lives in RhinoCodePlatform.Rhino3D, which ships with the RhinoCode plug-in
 // rather than with us, so it is reached reflectively once that plug-in is loaded.

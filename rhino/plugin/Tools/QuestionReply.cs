@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // A batch labels each line so the agent can map answers back to the questions it asked.
 internal static class QuestionReply

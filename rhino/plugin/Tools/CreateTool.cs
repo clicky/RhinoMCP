@@ -1,7 +1,7 @@
 #if R9
-using RhinoAI.ScriptProjects;
+using Rhino.AI.ScriptProjects;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 [McpServerToolType]
 internal static class CreateTool

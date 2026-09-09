@@ -1,7 +1,7 @@
 using Rhino.Display;
 using Rhino.Geometry;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 [McpServerToolType]
 internal static class ZoomToObjectTool

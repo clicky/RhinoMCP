@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-using RhinoAI.Resources;
+using Rhino.AI.Resources;
 
 using Eto.Drawing;
 
@@ -10,7 +10,7 @@ using Grasshopper2.Parameters;
 using Grasshopper2.Parameters.Special;
 using Grasshopper2.UI;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 [McpServerToolType]
 internal static class GH2_ApplyGraphTool

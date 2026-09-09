@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // What the CLI itself says about its login, and how to start a new one.
 //

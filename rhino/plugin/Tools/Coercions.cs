@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 /// <summary>Records every adjustment a tool made to out-of-range input, so a call that was accepted rather than refused can still say what it actually did.</summary>
 internal sealed class Coercions

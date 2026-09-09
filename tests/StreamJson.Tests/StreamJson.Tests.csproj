@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>RhinoAI.StreamJson.Tests</RootNamespace>
+    <RootNamespace>Rhino.AI.StreamJson.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -44,6 +44,7 @@
     <Compile Include="../../rhino/plugin/Agents/UserMessage.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/AcpMessageMapper.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/CliProcess.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/CliLogin.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/IStreamJsonParser.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/ParsedLine.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/TokenUsage.cs" LinkBase="PluginSources" />

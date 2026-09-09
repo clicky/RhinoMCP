@@ -1,4 +1,4 @@
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 [McpServerToolType]
 internal static class GetSelectionTool

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Acp;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // A per-CLI strategy that the runner composes. It owns ONLY the CLI-specific knowledge: how to
 // launch, how to frame an outgoing turn, and how to translate one stdout line into ACP

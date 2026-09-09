@@ -1,8 +1,8 @@
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-using static RhinoAI.Tools.ToolResult;
+using static Rhino.AI.Tools.ToolResult;
 
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 internal sealed class ArgumentBindingException(string wireName, string problem, Exception? inner = null)
     : ArgumentException(problem, inner)

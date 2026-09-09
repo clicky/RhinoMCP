@@ -1,6 +1,6 @@
-using RhinoAI;
+using Rhino.AI;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // The session-total arithmetic on TokenUsage: tokens always sum; cost coalesces so a tokens-only
 // session stays null while any reported cost carries through and like-for-like costs add.

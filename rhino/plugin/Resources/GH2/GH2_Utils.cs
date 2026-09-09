@@ -8,7 +8,7 @@ using Grasshopper2.UI.Canvas;
 
 using GH2Component = Grasshopper2.Components.Component;
 
-namespace RhinoAI.Resources;
+namespace Rhino.AI.Resources;
 
 internal static class GH2_Utils
 {

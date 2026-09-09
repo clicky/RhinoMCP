@@ -6,10 +6,10 @@ using Grasshopper;
 using Grasshopper.Kernel;
 
 #if R9
-using RhinoAI.Resources;
+using Rhino.AI.Resources;
 #endif
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 // One-shot grounding snapshot: selection + active viewport + doc/Grasshopper
 // summary in a single round-trip, so the agent can orient before acting without

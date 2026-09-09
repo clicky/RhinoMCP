@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using RhinoAI.Router;
+using Rhino.AI.Router;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 [TestFixture]
 public class RhinoCrashReportFinderTests

@@ -1,9 +1,9 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using RhinoAI.Server;
+using Rhino.AI.Server;
 
-namespace RhinoAI.Server.Tests;
+namespace Rhino.AI.Server.Tests;
 
 // Test-only resource types. Scan() discovers these via their attributes.
 [McpServerResourceType]

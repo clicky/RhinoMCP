@@ -1,6 +1,6 @@
 using System.Threading;
 
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 // The lenient converters run inside a shared JsonSerializerOptions with no return path to the caller, so a coerced value can only be reported through ambient state scoped to the synchronous bind.
 internal static class BindNotes

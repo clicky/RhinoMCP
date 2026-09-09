@@ -1,9 +1,9 @@
 using System.Diagnostics;
 
 using Acp;
-using RhinoAI;
+using Rhino.AI;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // Canned-line tests for the Claude Code stream-json translation. Each test feeds one real-shaped
 // stdout line and asserts the emitted SessionUpdate kinds/fields, plus the terminal/junk contract.

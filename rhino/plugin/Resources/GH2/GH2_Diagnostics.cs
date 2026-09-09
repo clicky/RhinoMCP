@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 using Grasshopper2.Doc;
 
-namespace RhinoAI.Resources;
+namespace Rhino.AI.Resources;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 internal enum GH2DiagnosticLevel

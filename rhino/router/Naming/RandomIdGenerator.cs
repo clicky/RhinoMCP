@@ -1,6 +1,6 @@
 using System;
 
-namespace RhinoAI.Router;
+namespace Rhino.AI.Router;
 
 /// <summary>
 /// Generates human-memorable IDs of the form adjective-biome-verb,

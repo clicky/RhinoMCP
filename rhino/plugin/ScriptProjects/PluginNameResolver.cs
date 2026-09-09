@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 internal static class PluginNameResolver
 {

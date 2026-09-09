@@ -1,4 +1,4 @@
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 internal static class GH2_Failures
 {

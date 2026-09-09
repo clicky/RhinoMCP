@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace RhinoAI.Router.Tools;
+namespace Rhino.AI.Router.Tools;
 
 [McpServerToolType]
 public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFinder)

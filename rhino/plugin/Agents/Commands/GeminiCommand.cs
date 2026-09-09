@@ -1,4 +1,4 @@
-namespace RhinoAI;
+namespace Rhino.AI;
 
 public sealed class GeminiCommand : AgentCommand
 {

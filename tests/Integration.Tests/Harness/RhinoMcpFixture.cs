@@ -3,7 +3,7 @@ using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-namespace RhinoAI.Integration.Tests.Harness;
+namespace Rhino.AI.Integration.Tests.Harness;
 
 // One-stop harness for ngentic-style fixtures that drive the mcp:
 // spawns the freshly-built router in an isolated TMPDIR, hands back the tool

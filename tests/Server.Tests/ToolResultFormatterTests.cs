@@ -2,9 +2,9 @@ using System.Text.Json;
 
 using NUnit.Framework;
 
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.Server.Tests;
+namespace Rhino.AI.Server.Tests;
 
 [TestFixture]
 public class ToolResultFormatterTests

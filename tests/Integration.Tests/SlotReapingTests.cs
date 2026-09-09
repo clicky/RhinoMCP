@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Slot rows in the SQLite registry are intent, not liveness — RhinoManager
 // probes pid + port on every list_slots call and prunes dead rows. These tests

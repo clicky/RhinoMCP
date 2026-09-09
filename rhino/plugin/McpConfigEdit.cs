@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using RhinoAI.Server;
+using Rhino.AI.Server;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 internal enum McpConfigFormat
 {

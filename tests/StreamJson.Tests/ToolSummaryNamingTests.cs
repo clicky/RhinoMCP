@@ -1,4 +1,4 @@
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // Agents call our tools through MCP, so every name arrives namespaced as mcp__<server>__<tool>.
 // Every phrase in ToolSummary is keyed on the registered name, so the prefix has to come off first

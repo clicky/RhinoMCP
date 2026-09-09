@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 using Microsoft.Extensions.Logging;
 
-namespace RhinoAI.Router;
+namespace Rhino.AI.Router;
 
 // Spawns, tracks, and tears down Rhino "slots". State lives in SlotStore
 // (SQLite) so concurrent router processes can't race on port allocation or

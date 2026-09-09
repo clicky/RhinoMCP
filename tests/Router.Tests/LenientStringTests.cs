@@ -1,7 +1,7 @@
 using System.Text.Json;
 using NUnit.Framework;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 // Covers the scalar-coercion leniency LenientStringConverter adds to string
 // binding: some MCP hosts send a string-typed arg as a JSON number or bool, and

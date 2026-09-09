@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using RhinoAI.Router;
+using Rhino.AI.Router;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 // Regression for the concurrency finding: ReservePort used to hold _connLock AND an open
 // BEGIN IMMEDIATE write transaction across the whole synchronous isPortListening probe loop,

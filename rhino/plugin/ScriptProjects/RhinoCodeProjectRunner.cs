@@ -9,9 +9,9 @@ using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
 using Rhino.Runtime.Code.Diagnostics;
 
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 internal class RhinoCodeProjectRunner : IProjectRunner
 {

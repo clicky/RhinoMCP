@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // Resume hangs entirely off one identifier: the id the CLI opens its session under has to be the id
 // the transcript is saved under, or --resume names a session that never existed. It did not, which

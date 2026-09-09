@@ -1,4 +1,4 @@
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 // Pairs with Coercions: that one records what a call changed, this one records why it cannot run.
 // Collected rather than returned one at a time, so three bad arguments cost one round trip.

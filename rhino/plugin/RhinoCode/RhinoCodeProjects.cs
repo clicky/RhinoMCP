@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using Rhino.Runtime.Code.Display;
 using Rhino.Runtime.Code.Projects;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Rhino3DCommandEditable lives in RhinoCodePlatform.Rhino3D, which ships with the RhinoCode
 // plug-in rather than with us, so we never reference it. Image is only publicly settable on

@@ -1,4 +1,4 @@
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 /// <summary>Tracks which destination inputs a batch has already wired into, so replace only clears wires that predate the call and several sources deliberately merged into one input still accumulate.</summary>
 internal sealed class Rewiring(bool replace)

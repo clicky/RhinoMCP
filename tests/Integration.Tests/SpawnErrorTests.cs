@@ -1,6 +1,6 @@
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Exercises the error branches of spawn_slot. These don't need a real Rhino —
 // the version-resolution step in RhinoLocator throws FileNotFoundException for

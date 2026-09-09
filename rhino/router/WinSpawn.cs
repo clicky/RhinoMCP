@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace RhinoAI.Router;
+namespace Rhino.AI.Router;
 
 // CreateProcess + CREATE_BREAKAWAY_FROM_JOB lets the child escape any Job Object
 // the router inherited (e.g. VS Code extension host). Without breakaway, GUI

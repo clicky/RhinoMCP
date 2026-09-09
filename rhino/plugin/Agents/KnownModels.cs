@@ -1,4 +1,4 @@
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Editable seed lists of model identifiers per adapter, used to populate the Model dropdown in AI
 // settings. Not exhaustive and not validated: the CLIs accept any string and validate at request

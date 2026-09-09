@@ -1,6 +1,6 @@
-using RhinoAI;
+using Rhino.AI;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // The overlay/dedup invariant AISettings.GetAgents relies on (PLAN W1: custom entries that alias a
 // built-in name override the built-in in place, never duplicated; the built-ins are always present).
