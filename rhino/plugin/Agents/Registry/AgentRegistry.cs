@@ -37,7 +37,7 @@ internal static class AgentRegistry
         }
         else if (OperatingSystem.IsMacOS())
         {
-            Builtin("gemini", AgentAdapter.Gemini, new GeminiFinder());
+            definitions.Add(Builtin("gemini", AgentAdapter.Gemini, new GeminiFinder()));
         }
 
         return definitions;
@@ -65,7 +65,8 @@ internal static class AgentRegistry
         return chain;
     }
 
-    private static bool ProbeAvailable(AgentDefinition def) => def.AgentPaths.Any();
+    // A finder only ever returns paths it probed, but a custom entry's path is whatever the user typed.
+    private static bool ProbeAvailable(AgentDefinition def) => def.AgentPaths.Any(File.Exists);
 
     // First Enabled && Available in chain order, then the configured default, then the
     // first enabled+available built-in. Falls back to nothing only when discovery is empty.
