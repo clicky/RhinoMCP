@@ -34,7 +34,11 @@
     <Compile Include="../../rhino/plugin/Server/BindNotes.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/AgentAdapter.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/AgentDefinition.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/AgentRegistry.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Registry/AgentRegistry.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Registry/IAgentFinder.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Registry/ClaudeFinder.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Registry/CodexFinder.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Registry/GeminiFinder.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/AgentPrompts.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/Attachment.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/UserMessage.cs" LinkBase="PluginSources" />

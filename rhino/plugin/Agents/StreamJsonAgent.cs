@@ -34,6 +34,11 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     private SemaphoreSlim WriteGate { get; } = new(1, 1);
     private SemaphoreSlim TurnGate { get; } = new(1, 1);
 
+    private readonly record struct TurnCompletion(StopReason Reason, TokenUsage Usage);
+
+    // Resolved by the read-loop exit, so a one-turn-per-process CLI cannot hand the next prompt a stdin it already closed.
+    private TurnCompletion? PendingCompletion { get; set; }
+
     // Stable session id so a respawn (after cancel/crash) resumes the same CLI conversation. Seeded
     // from a resumed past conversation when one is supplied, so the first spawn continues that CLI
     // session rather than opening a brand-new one. Rotated to a fresh id only when a resume target is
@@ -252,6 +257,12 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         {
             await writer.WriteLineAsync(line).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
+            if (Parser.IsOneTurnPerProcess)
+            {
+                writer.Close();
+                lock (Gate)
+                    Stdin = null;
+            }
         }
         finally
         {
@@ -279,6 +290,8 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                 try
                 {
                     ParsedLine parsed = Parser.Parse(line);
+                    if (parsed.SessionId is string minted)
+                        AdoptMintedSessionId(minted);
                     foreach (SessionUpdate update in parsed.Updates ?? [])
                         Push(update);
                     if (parsed.IsTurnComplete)
@@ -297,6 +310,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             // already won the TCS by here, so this TrySetException is then a no-op.
             TaskCompletionSource<StopReason>? turn = null;
             bool resumeRejected = false;
+            TurnCompletion? completed = null;
             lock (Gate)
             {
                 // ReferenceEquals(null, null) is true, so the loopback seam (Proc and token both
@@ -304,6 +318,8 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                 if (ReferenceEquals(Proc, token))
                 {
                     turn = CurrentTurn;
+                    completed = PendingCompletion;
+                    PendingCompletion = null;
                     CurrentTurn = null;
                     Proc = null;
                     Stdin = null;
@@ -334,8 +350,35 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             }
             if (resumeRejected)
                 Conversation.NoteSystem("could not resume the saved session (it may have expired); started fresh");
-            turn?.TrySetException(new IOException($"{Parser.DisplayName} process exited."));
+            if (completed is TurnCompletion done)
+            {
+                Conversation.RecordUsage(done.Usage);
+                turn?.TrySetResult(done.Reason);
+            }
+            else
+            {
+                turn?.TrySetException(new IOException($"{Parser.DisplayName} process exited."));
+            }
         }
+    }
+
+    // The transcript has to be keyed by the id the CLI will actually resume, so adopt the minted one and drop the row we came in under.
+    private void AdoptMintedSessionId(string minted)
+    {
+        if (!Guid.TryParse(minted, out Guid parsed))
+            return;
+
+        Guid stale;
+        lock (Gate)
+        {
+            if (parsed == AgentSessionId)
+                return;
+            stale = AgentSessionId;
+            AgentSessionId = parsed;
+            ResumePending = false;
+        }
+        Conversation.AdoptSessionId(parsed);
+        ConversationStore.Delete(stale.ToString());
     }
 
     // Our IAcpClient handler is synchronous, so this completes inline; the parser cloned any
@@ -351,6 +394,11 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             {
                 turn = CurrentTurn;
                 ResumePending = false; // a turn landed, so the --resume target was accepted
+                if (Parser.IsOneTurnPerProcess)
+                {
+                    PendingCompletion = new TurnCompletion(reason, usage);
+                    return;
+                }
             }
         if (turn is null)
             return;

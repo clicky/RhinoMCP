@@ -82,6 +82,7 @@
     <!-- The web panel, built from rhino/panel. Committed so a build needs no Node toolchain; the
          RebuildAIPanel target below refreshes it when one is present. -->
     <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="RhinoAI.panel.html" />
+    <EmbeddedResource Include="Agents/codex-config.toml" LogicalName="RhinoAI.codex-config.toml" />
   </ItemGroup>
 
   <!-- Best effort: rebuild the panel bundle when the developer has already run `npm install` in

@@ -15,7 +15,7 @@ public sealed class StreamJsonParserEdgeCaseTests
         new(name, adapter, name, [], string.Empty, [], string.Empty, true, true);
 
     private static ClaudeStreamJsonParser Claude() => new(Def(AgentAdapter.Claude, "claude"));
-    private static CodexStreamJsonParser Codex() => new(Def(AgentAdapter.Codex, "codex"));
+    private static CodexStreamJsonParser Codex() => new(Def(AgentAdapter.Codex, "codex"), "/tmp/codex-home");
 
     [Test]
     public void Claude_assistant_line_with_text_and_tool_use_emits_both_in_order()
@@ -88,32 +88,43 @@ public sealed class StreamJsonParserEdgeCaseTests
     }
 
     [Test]
-    public void Codex_agent_message_with_non_string_message_is_none()
+    public void Codex_agent_message_with_non_string_text_is_none()
     {
         ParsedLine parsed = Codex().Parse(
-            """{"msg":{"type":"agent_message","message":{"nested":"object"}}}""");
+            """{"type":"item.completed","item":{"id":"i1","type":"agent_message","text":{"nested":"object"}}}""");
 
         Assert.That(parsed.Updates, Is.Empty);
         Assert.That(parsed.IsTurnComplete, Is.False);
     }
 
     [Test]
-    public void Codex_mcp_tool_call_without_a_tool_field_is_none()
+    public void Codex_tool_call_keeps_its_chip_when_only_the_tool_name_is_missing()
     {
         ParsedLine parsed = Codex().Parse(
-            """{"msg":{"type":"mcp_tool_call","server":"rhino"}}""");
+            """{"type":"item.started","item":{"id":"item_0","type":"mcp_tool_call","server":"rhino"}}""");
 
-        Assert.That(parsed.Updates, Is.Empty);
+        ToolCallSessionUpdate call = (ToolCallSessionUpdate)parsed.Updates[0];
+        Assert.That(call.ToolCallId, Is.EqualTo("item_0"), "the id is what the later result correlates against");
+        Assert.That(call.Title, Is.Empty);
     }
 
     [Test]
-    public void Codex_reads_type_from_root_when_there_is_no_msg_envelope()
+    public void Codex_reads_the_event_type_from_the_root_object()
     {
-        ParsedLine parsed = Codex().Parse(
-            """{"type":"task_complete","last_agent_message":"done"}""");
+        ParsedLine parsed = Codex().Parse("""{"type":"turn.completed","usage":{"output_tokens":6}}""");
 
         Assert.That(parsed.IsTurnComplete, Is.True);
         Assert.That(parsed.Reason, Is.EqualTo(StopReason.EndTurn));
+        Assert.That(parsed.Usage.OutputTokens, Is.EqualTo(6));
+    }
+
+    [Test]
+    public void Codex_ignores_a_stale_msg_enveloped_line_rather_than_faulting()
+    {
+        ParsedLine parsed = Codex().Parse("""{"msg":{"type":"task_complete","last_agent_message":"done"}}""");
+
+        Assert.That(parsed.IsTurnComplete, Is.False, "the pre-0.153 envelope must not be mistaken for a terminal event");
+        Assert.That(parsed.Updates, Is.Empty);
     }
 
     [Test]

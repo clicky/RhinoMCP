@@ -25,6 +25,8 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
 
     public string NotFoundMessage => "Claude CLI not found. Install Claude Code (claude.ai/install).";
 
+    public bool IsOneTurnPerProcess => false;
+
     public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
     {
         // Same {"mcpServers":{...}} shape Claude Code expects; rhino points at this doc's HTTP

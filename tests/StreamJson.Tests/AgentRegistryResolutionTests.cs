@@ -142,41 +142,10 @@ public sealed class AgentRegistryResolutionTests
     }
 
     [Test]
-    public void Default_search_paths_carry_the_command_name_and_are_deduped()
+    public void Every_discovered_path_is_a_real_file_so_availability_means_something()
     {
-        IReadOnlyList<string> paths = AgentRegistry.DefaultSearchPaths("claude");
-        Assert.That(paths, Is.Not.Empty);
-        Assert.That(paths.Distinct().Count(), Is.EqualTo(paths.Count));
-        Assert.That(paths, Has.Some.Matches<string>(static p => Path.GetFileName(p).StartsWith("claude")));
-    }
-
-    [Test]
-    public void Default_search_paths_never_probe_the_bare_extensionless_name_on_windows()
-    {
-        IReadOnlyList<string> paths = AgentRegistry.DefaultSearchPaths("claude");
-
-        if (OperatingSystem.IsWindows())
-        {
-            Assert.That(
-                paths,
-                Has.None.Matches<string>(static p => Path.GetFileName(p) == "claude"),
-                "the extensionless POSIX npm shim (%APPDATA%\\npm\\claude) must never be a candidate");
-            Assert.That(paths, Has.Some.Matches<string>(static p =>
-                Path.GetFileName(p).Equals("claude.exe", StringComparison.OrdinalIgnoreCase)));
-            Assert.That(paths, Has.Some.Matches<string>(static p =>
-                Path.GetFileName(p).Equals("claude.cmd", StringComparison.OrdinalIgnoreCase)));
-        }
-        else
-        {
-            Assert.That(paths, Has.All.Matches<string>(static p => Path.GetFileName(p) == "claude"));
-        }
-    }
-
-    [Test]
-    public void Default_search_paths_probe_a_fully_qualified_command_as_is()
-    {
-        string qualified = OperatingSystem.IsWindows() ? @"C:\tools\claude.exe" : "/opt/tools/claude";
-        IReadOnlyList<string> paths = AgentRegistry.DefaultSearchPaths(qualified);
-        Assert.That(paths, Has.Some.EqualTo(qualified));
+        foreach (AgentDefinition builtin in AgentRegistry.Builtins())
+            Assert.That(builtin.AgentPaths, Has.All.Matches<string>(File.Exists),
+                $"{builtin.Name} discovery must only ever return paths it has already probed");
     }
 }

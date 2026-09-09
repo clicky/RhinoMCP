@@ -15,7 +15,7 @@ public sealed class ClaudeStreamJsonParserTests
             Name: "claude",
             Adapter: AgentAdapter.Claude,
             Command: "claude",
-            SearchPaths: [],
+            AgentPaths: [],
             Model: "",
             ExtraArgs: [],
             SystemPrompt: "",

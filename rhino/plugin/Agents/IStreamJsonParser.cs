@@ -19,6 +19,9 @@ internal interface IStreamJsonParser
     // The message thrown when the CLI binary is not found at any SearchPath.
     public string NotFoundMessage { get; }
 
+    // `codex exec` emits nothing until stdin hits EOF, so the runner closes stdin after the turn.
+    public bool IsOneTurnPerProcess { get; }
+
     // Append all launch args for one process spawn. 'resume' is false on the first spawn (open the
     // session fresh, e.g. --session-id <id>) and true on a respawn after cancel/crash (continue it,
     // e.g. --resume <id>). mcpUrl is this doc's HTTP listener. agentSessionId is the stable
