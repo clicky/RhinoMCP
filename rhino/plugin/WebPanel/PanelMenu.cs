@@ -1,7 +1,7 @@
 using Eto.Drawing;
 using Eto.Forms;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // The panel's right-click menu, as a real Eto menu rather than HTML.
 //

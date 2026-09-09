@@ -2,12 +2,12 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // A plugin-owned CODEX_HOME, which is what keeps the user's own ~/.codex/config.toml and its MCP servers out of the Rhino agent.
 internal static class CodexHome
 {
-    private const string ConfigResourceName = "RhinoAI.codex-config.toml";
+    private const string ConfigResourceName = "Rhino.AI.codex-config.toml";
 
     private static string? Prepared { get; set; }
 

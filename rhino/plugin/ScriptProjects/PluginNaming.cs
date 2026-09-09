@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 // Nothing here may touch RhinoCommon: this file is linked into Server.Tests, which is Rhino-free.
 internal static class PluginNaming

@@ -4,9 +4,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Acp;
-using ContentBlock = Acp.ContentBlock; // disambiguate from RhinoAI.Server.ContentBlock
+using ContentBlock = Acp.ContentBlock; // disambiguate from Rhino.AI.Server.ContentBlock
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Verified against codex-cli 0.153.4. Static settings live in CODEX_HOME's config.toml, not in flags, because `codex exec resume` takes neither --approve-for-me nor --profile: a flag-based setup works on turn one and silently stops on turn two.
 internal sealed class CodexStreamJsonParser : IStreamJsonParser

@@ -1,8 +1,8 @@
 using System.Text.Json;
 using NUnit.Framework;
-using RhinoAI.Server;
+using Rhino.AI.Server;
 
-namespace RhinoAI.Server.Tests;
+namespace Rhino.AI.Server.Tests;
 
 [TestFixture]
 public class ProtocolTests

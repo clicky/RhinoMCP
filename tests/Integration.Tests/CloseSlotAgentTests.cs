@@ -1,6 +1,6 @@
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Drives Claude via the local CLI against an isolated rhino-mcp-router. No
 // Rhino install required — close_slot on a bogus slot only touches the router.

@@ -1,4 +1,4 @@
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 // In-house replacements for the ModelContextProtocol.* attribute set. Same
 // names + same property shapes used by existing tool/resource files, so the

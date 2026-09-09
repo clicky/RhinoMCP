@@ -2,9 +2,9 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using RhinoAI.WebPanel;
+using Rhino.AI.WebPanel;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // Writes a real event stream, serialised by the real serialiser, to a file that the panel's own
 // browser checks replay (rhino/panel/tools/verify.mjs). That is the only place the two languages

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Dumb, immutable, behavior-free description of an agent. Built via `new(...)` or `with`
 // expressions. Model/SystemPrompt are empty strings (never null); SearchPaths/ExtraArgs are

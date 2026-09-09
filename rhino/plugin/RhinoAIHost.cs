@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using Rhino.FileIO;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 internal static class RhinoAIHost
 {
@@ -296,7 +296,7 @@ internal static class RhinoAIHost
 
     // Shared with the router via the linked RouterPaths source file, so the
     // drop-dir contract has one owner and can't drift between the two assemblies.
-    private static string ListenerDropDir() => RhinoAI.Router.RouterPaths.ListenersDir;
+    private static string ListenerDropDir() => Rhino.AI.Router.RouterPaths.ListenersDir;
 
     // Stop the listener bound to the given port and close its associated doc
     // without keeping any save artefacts. Used by the router's control channel

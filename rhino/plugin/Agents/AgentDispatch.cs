@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // The single funnel every surface (command, command-line interceptor, panel) routes through,
 // so they all drive one active agent per doc against one shared conversation. Resolves the

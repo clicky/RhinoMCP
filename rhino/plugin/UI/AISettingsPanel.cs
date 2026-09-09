@@ -3,7 +3,7 @@ using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Shared settings UI (AI Agents / MCP Servers / Tools). Hosted by both the standalone
 // AISettingsDialog and the Rhino Options page (AIOptionsPage); neither owns the commit logic,

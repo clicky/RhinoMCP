@@ -1,4 +1,4 @@
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Canonical documentation URLs surfaced from the UI. Kept in one place so the in-product links
 // can't drift from the published site.

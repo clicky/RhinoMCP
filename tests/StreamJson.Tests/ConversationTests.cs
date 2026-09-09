@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using RhinoAI;
+using Rhino.AI;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // The live transcript graph: turn/event recording, CompleteToolCall folding a tool's output back
 // into its originating ToolUse event, the Changed signal firing on every mutation, late/stray-event

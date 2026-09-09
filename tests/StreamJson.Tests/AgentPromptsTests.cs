@@ -1,6 +1,6 @@
-using RhinoAI;
+using Rhino.AI;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // Pins the pull-only grounding contract (PLAN locked decision: no auto-injection, mitigated by an
 // always-on steer that is "never dropped"). Compose is the one place that invariant lives in code,

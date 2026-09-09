@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 internal class RhinoAppRunScript : IRhinoCodeRunner
 {

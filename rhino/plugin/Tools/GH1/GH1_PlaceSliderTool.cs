@@ -1,12 +1,12 @@
 using System.Drawing;
 
-using RhinoAI.Resources;
+using Rhino.AI.Resources;
 
 using Grasshopper.GUI.Base;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 [McpServerToolType]
 internal static class GH1_PlaceSliderTool

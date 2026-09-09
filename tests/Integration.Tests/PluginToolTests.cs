@@ -1,8 +1,8 @@
 using System.Text.Json;
 
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Tests that need a live Rhino with the rh-mcp plugin loaded. The fixture
 // spawns Rhino via the router's spawn_slot, so Rhino must be installed and

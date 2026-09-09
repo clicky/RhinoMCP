@@ -1,6 +1,6 @@
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Exercises open_doc / close_doc — the plugin-side document lifecycle tools.
 [TestFixture]

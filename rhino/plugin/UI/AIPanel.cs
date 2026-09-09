@@ -4,9 +4,9 @@ using System.Runtime.InteropServices;
 
 using Eto.Forms;
 
-using RhinoAI.WebPanel;
+using Rhino.AI.WebPanel;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // The AI panel. One instance per document, rendered in a WebView: the panel itself lives in
 // rhino/panel and is embedded as a single HTML resource.
@@ -23,7 +23,7 @@ public class AIPanel : Panel
 {
     public static Guid PanelId => typeof(AIPanel).GUID;
 
-    private const string PageResource = "RhinoAI.panel.html";
+    private const string PageResource = "Rhino.AI.panel.html";
 
     private uint DocSerial { get; }
     private WebView View { get; } = new();

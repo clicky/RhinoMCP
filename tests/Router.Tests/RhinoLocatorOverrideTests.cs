@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using RhinoAI.Router;
+using Rhino.AI.Router;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 // The per-version path override (debug-build support). Uses a real temp file as
 // the override target so File.Exists passes regardless of what Rhino is installed.

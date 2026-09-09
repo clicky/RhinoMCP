@@ -1,8 +1,8 @@
-using RhinoAI.Resources;
+using Rhino.AI.Resources;
 
 using Grasshopper2.Doc;
 
-namespace RhinoAI.Tools;
+namespace Rhino.AI.Tools;
 
 [McpServerToolType]
 internal static class GH2_ClearCanvasTool

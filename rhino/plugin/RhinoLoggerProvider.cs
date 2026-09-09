@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 internal sealed class RhinoLoggerProvider : ILoggerProvider
 {

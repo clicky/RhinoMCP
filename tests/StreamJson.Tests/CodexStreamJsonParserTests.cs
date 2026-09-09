@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Acp;
-using RhinoAI;
+using Rhino.AI;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // Every canned line below is a verbatim event captured from codex-cli 0.153.4, not a guess at the shape.
 [TestFixture]

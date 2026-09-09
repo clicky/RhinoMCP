@@ -1,8 +1,8 @@
 using System.IO;
 
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 // Preview-loaded commands last only for the session, so the previous build is re-previewed once per run.
 internal static class ScriptProjectStartup

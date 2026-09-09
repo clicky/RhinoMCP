@@ -1,6 +1,6 @@
 using Rhino.DocObjects;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // What the composer's @ menu can attach to a prompt: the things in the document a user would point
 // at. Read straight off the document each time rather than cached, because the interesting one is

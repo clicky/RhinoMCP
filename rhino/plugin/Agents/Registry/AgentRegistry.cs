@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Discovery result for one definition; kept separate so AgentDefinition stays free of
 // computed/probed state.

@@ -1,6 +1,6 @@
 using RhinoCommand = Rhino.Commands.Command;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 public class MCPSettingsCommand : RhinoCommand
 {

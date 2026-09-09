@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using RhinoAI.Router;
-using RhinoAI.Router.Tools;
+using Rhino.AI.Router;
+using Rhino.AI.Router.Tools;
 
-namespace RhinoAI.Router.Tests;
+namespace Rhino.AI.Router.Tests;
 
 // Guards the spawn_slot-specific exception arms that SpawnDiagnostics deliberately
 // declines. The status-code HttpRequestException case is a regression guard: the Mac

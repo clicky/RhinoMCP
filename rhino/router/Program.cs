@@ -4,8 +4,8 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RhinoAI.Router;
-using RhinoAI.Router.Tools.Generated;
+using Rhino.AI.Router;
+using Rhino.AI.Router.Tools.Generated;
 
 RouterConfig config = RouterConfig.FromArgs(args);
 

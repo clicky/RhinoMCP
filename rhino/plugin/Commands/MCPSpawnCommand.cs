@@ -1,6 +1,6 @@
 using Rhino.Commands;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Hidden autostart entry point invoked by the router via `-runscript=_-MCPSpawn _Enter`.
 // The port arrives via the RHINO_MCP_AUTOSTART_PORT env var so we don't have to feed

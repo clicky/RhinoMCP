@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 
 using Eto.Forms;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // Carries the protocol over Eto's WebView.
 //

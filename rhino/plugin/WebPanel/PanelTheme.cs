@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // Rhino's own chrome colours, translated into the panel's CSS custom properties.
 //

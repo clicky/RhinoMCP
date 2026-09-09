@@ -7,9 +7,9 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Acp;
-using ContentBlock = Acp.ContentBlock; // disambiguate from RhinoAI.Server.ContentBlock
+using ContentBlock = Acp.ContentBlock; // disambiguate from Rhino.AI.Server.ContentBlock
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // The single owner of stream-json process lifecycle for any line-framed CLI agent (Claude, Codex).
 // Owns the process spawn/resolve, the read loop, turn gating, error capture, Kill/respawn and

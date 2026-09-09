@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // The panel -> host half, matching PanelCommand in rhino/panel/src/protocol/events.ts.
 //

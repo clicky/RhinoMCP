@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>RhinoAI.Server.Tests</RootNamespace>
+    <RootNamespace>Rhino.AI.Server.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,7 +40,7 @@
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Tools/ToolResult.cs" LinkBase="PluginSources" />
     <Using Include="System.Text.Json" />
-    <Using Include="RhinoAI.Server" />
+    <Using Include="Rhino.AI.Server" />
   </ItemGroup>
 
   <ItemGroup>

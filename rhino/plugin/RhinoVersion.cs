@@ -1,4 +1,4 @@
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Single source for the version token the router keys slots by. The listener
 // announcement and the Connect dialog's version pin must use the same token, or a

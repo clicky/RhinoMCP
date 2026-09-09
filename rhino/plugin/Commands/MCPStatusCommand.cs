@@ -2,7 +2,7 @@ using Rhino.Commands;
 using Rhino.Input;
 using Rhino.Input.Custom;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 public class MCPStatusCommand : Command
 {

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 // JSON-RPC 2.0 envelopes + the subset of MCP protocol types we actually emit.
 // All public fields use camelCase via JsonNamingPolicy.CamelCase, which is the

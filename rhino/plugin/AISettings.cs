@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Rhino.PlugIns;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 internal static class AISettings
 {

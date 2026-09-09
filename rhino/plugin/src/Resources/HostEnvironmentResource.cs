@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 using Rhino.Runtime;
 
-namespace RhinoAI.Resources;
+namespace Rhino.AI.Resources;
 
 [McpServerResourceType]
 internal static class HostEnvironmentResource

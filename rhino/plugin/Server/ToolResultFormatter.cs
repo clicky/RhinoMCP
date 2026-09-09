@@ -1,6 +1,6 @@
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 /// <summary>
 /// Renders a tool's result as the MCP call result on the wire.

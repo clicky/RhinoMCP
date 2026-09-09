@@ -1,4 +1,4 @@
-namespace RhinoAI;
+namespace Rhino.AI;
 
 /// <summary>
 /// All MCP Toolsare forced on the UI Thread, this attribute excludes a tool from that

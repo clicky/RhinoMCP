@@ -1,8 +1,8 @@
 using System.Text.Json;
 
-using RhinoAI.WebPanel;
+using Rhino.AI.WebPanel;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // ConversationFeed is the only thing standing between "something changed" and the panel's delta
 // stream, so these pin the two properties the panel depends on: consecutive assistant chunks

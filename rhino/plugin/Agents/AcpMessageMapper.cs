@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Acp;
-using ContentBlock = Acp.ContentBlock; // disambiguate from the global RhinoAI.Server.ContentBlock
+using ContentBlock = Acp.ContentBlock; // disambiguate from the global Rhino.AI.Server.ContentBlock
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Maps between the plugin's UserMessage/attachments and ACP content blocks. The agent has no
 // filesystem access, so every attachment is delivered inline: images as base64, text files fenced.

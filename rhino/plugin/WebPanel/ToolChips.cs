@@ -1,4 +1,4 @@
-namespace RhinoAI.WebPanel;
+namespace Rhino.AI.WebPanel;
 
 // Authored host-side beside the card's title, because the panel holds no per-tool knowledge.
 internal static class ToolChips

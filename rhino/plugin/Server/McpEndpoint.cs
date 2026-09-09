@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace RhinoAI.Server;
+namespace Rhino.AI.Server;
 
 // MapMcp wires a single POST endpoint at `pattern` that handles MCP-flavoured
 // JSON-RPC 2.0. We don't implement the Streamable-HTTP SSE channel (the plugin
@@ -42,7 +42,7 @@ internal sealed class McpDispatcher
 
     public async Task HandleAsync(HttpContext ctx)
     {
-        ILogger? logger = ctx.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("RhinoAI.Server");
+        ILogger? logger = ctx.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("Rhino.AI.Server");
 
         JsonRpcRequest? request;
         try
@@ -153,7 +153,7 @@ internal sealed class McpDispatcher
     private Task<JsonRpcResponse> HandleToolsList()
     {
         HashSet<string> disabled = Filtered
-            ? new HashSet<string>(RhinoAI.AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase)
+            ? new HashSet<string>(Rhino.AI.AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase)
             : [];
         // In-panel-only tools (e.g. ask_user) are hidden from the external `/`
         // endpoint; only the in-panel `/agent` endpoint (Filtered) lists them.
@@ -261,7 +261,7 @@ internal sealed class McpDispatcher
                 }
             };
 
-        if (Filtered && RhinoAI.AISettings.DisabledTools.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+        if (Filtered && Rhino.AI.AISettings.DisabledTools.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError

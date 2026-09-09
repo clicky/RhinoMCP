@@ -1,6 +1,6 @@
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // list_slots is the router's window into its own slot registry. With an
 // isolated state dir and no user-started Rhino announcement to adopt, the

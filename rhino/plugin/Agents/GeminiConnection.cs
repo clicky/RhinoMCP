@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using Acp;
 
-namespace RhinoAI;
+namespace Rhino.AI;
 
 // Spawns Gemini in its native ACP mode (`gemini --experimental-acp`) and returns a started
 // ClientSideConnection driving it. This is the proof that the rhino/acp library works against a

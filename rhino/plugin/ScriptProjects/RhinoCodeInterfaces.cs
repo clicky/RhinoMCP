@@ -1,6 +1,6 @@
-using RhinoAI.Tools;
+using Rhino.AI.Tools;
 
-namespace RhinoAI.ScriptProjects;
+namespace Rhino.AI.ScriptProjects;
 
 internal interface IRhinoCodeRunner
 {

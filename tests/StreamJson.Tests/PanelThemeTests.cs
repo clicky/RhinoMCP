@@ -1,8 +1,8 @@
-using RhinoAI.WebPanel;
+using Rhino.AI.WebPanel;
 
-using Rgb = RhinoAI.WebPanel.PanelTheme.Rgb;
+using Rgb = Rhino.AI.WebPanel.PanelTheme.Rgb;
 
-namespace RhinoAI.StreamJson.Tests;
+namespace Rhino.AI.StreamJson.Tests;
 
 // The panel takes its chrome from whatever Rhino's Eto theme reports, including themes that did not
 // exist when this was written, so the derivation has to stay coherent for any input rather than be

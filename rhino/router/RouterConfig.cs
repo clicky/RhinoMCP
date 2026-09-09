@@ -1,4 +1,4 @@
-namespace RhinoAI.Router;
+namespace Rhino.AI.Router;
 
 public record RouterConfig(
     string DefaultVersion,

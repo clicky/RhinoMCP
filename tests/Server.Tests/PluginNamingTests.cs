@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using RhinoAI.ScriptProjects;
+using Rhino.AI.ScriptProjects;
 
-namespace RhinoAI.Server.Tests;
+namespace Rhino.AI.Server.Tests;
 
 [TestFixture]
 internal sealed class PluginNamingTests

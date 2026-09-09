@@ -1,6 +1,6 @@
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Exercises spawn_slot end-to-end: the router must launch a real Rhino,
 // receive its listener announcement, and return the slot metadata.

@@ -1,7 +1,7 @@
 using System.Text.Json;
-using RhinoAI.Integration.Tests.Harness;
+using Rhino.AI.Integration.Tests.Harness;
 
-namespace RhinoAI.Integration.Tests;
+namespace Rhino.AI.Integration.Tests;
 
 // Pins down the Windows-specific contract: every slot gets its own OS process,
 // regardless of version. This is the inverse of MacSharedProcessTests and is
