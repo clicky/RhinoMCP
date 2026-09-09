@@ -1,7 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- The standard Rhino C# plug-in property sheet: .rhp TargetExt, the build-type
+       DefineConstants (RHINO_WIP_BUILD / _BETA_ / _COMMERCIAL_) and, via
+       Rhino.Common.props, $(RhinoSrcDir) / $(RhinoOutputDir).
+       Skipped in a standalone checkout, which has no Rhino source tree. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\..\..\..\RhinoProjectPropertySheets\Rhino.CS.PlugIn.props" Condition="'$(IsInRhino)' == 'true'" />
+
   <PropertyGroup>
-    <!-- Rhino 9: net8.0 -->
+    <!-- Rhino 9: net8.0. In-tree there is only one Rhino to build against, so R8 is
+         a standalone-checkout option only. -->
+    <RhinoTarget Condition="'$(IsInRhino)' == 'true'">R9</RhinoTarget>
     <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
     <!-- R8/R9 source gates (#if R9) follow $(RhinoTarget) directly. -->
     <DefineConstants>$(DefineConstants);$(RhinoTarget)</DefineConstants>
@@ -11,17 +19,22 @@
     <LangVersion>12</LangVersion>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <TargetExt>.rhp</TargetExt>
-    <NoWarn>NU1701</NoWarn>
+    <!-- CA1416: System.Drawing and friends are Windows-only, and this stays a plain
+         net8.0 plug-in (the .rhp has to sit in a folder literally named net8.0 for
+         RhinoCommon's GetMultiTargetPath to find it, so net8.0-windows is not an option).
+         NU1701/NU1702: the Grasshopper package's assets predate net8.0.
+         MSB3277: the usual framework-assembly version spread across the Rhino SDK
+         project references, plus the in-tree RhinoCommon vs the packaged Grasshopper's
+         older RhinoCommon. CS0436: version.cs is compiled into this plug-in and into
+         several of the assemblies it references, whose InternalsVisibleTo can leak
+         their RhinoBuildConstants here - harmless, the constants are identical, but
+         Rhino.Common.props turns warnings into errors in Rhino.sln Release builds. -->
+    <NoWarn>$(NoWarn);CA1416;NU1701;NU1702;MSB3277;CS0436</NoWarn>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>RhinoAI</RootNamespace>
     <AssemblyName>RhinoAI</AssemblyName>
   </PropertyGroup>
-
-  <!-- Rhino.Common.props supplies $(RhinoOutputDir) (src4/bin/<Config>/ on Windows,
-       bin/<Config>MacRhino/ on macOS). Guarded so a standalone checkout without the
-       Rhino source tree still builds. -->
-  <Import Project="..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props" Condition="Exists('..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props')" />
 
   <PropertyGroup>
     <!-- In-tree R9 builds stage into the solution's shared plug-in folder,
@@ -44,9 +57,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Version is inherited from rhino/Directory.Build.props (single source). -->
+    <!-- Assembly version attributes come from src4/version.cs (in-tree) or from
+         $(Version) in rhino/Directory.Build.props (standalone); $(Company) likewise.
+         Do not set them here. -->
     <Title>Rhino AI</Title>
-    <Company>McNeel</Company>
     <Description>AI tools for Rhino</Description>
   </PropertyGroup>
 
@@ -82,27 +96,69 @@
     <AspNetCoreRuntimeVersion>8.0.30</AspNetCoreRuntimeVersion>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- Restored only to source the files BundleAspNetCoreFramework copies, so they are
+       needed only where that target runs (see it below). -->
+  <ItemGroup Condition="'$(IsInRhino)' == 'false'">
     <PackageReference Include="Microsoft.AspNetCore.App.Runtime.win-x64" Version="$(AspNetCoreRuntimeVersion)" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" Condition="'$(PluginOS)' == 'win'" />
     <PackageReference Include="Microsoft.AspNetCore.App.Runtime.osx-arm64" Version="$(AspNetCoreRuntimeVersion)" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" Condition="'$(PluginOS)' == 'osx'" />
   </ItemGroup>
 
-  <!-- The referenced RhinoCommon version becomes the yak rh8_xx tag, so it is the
-       minimum Rhino 8 service release Package Manager will offer this to. 8.19 is
-       the floor: it is the first 8.x package with net7.0 (.NET Core) assets, and
-       everything below is net48-only. Its net7.0 targets add a WindowsForms
-       FrameworkReference unconditionally (fixed in 8.27), which needs
+  <!-- In-tree: the Rhino SDK assemblies come from the projects they are built from,
+       so this plug-in always compiles against the RhinoCommon sitting next to it -
+       the same references Commands, MeshCommands and the Grasshopper components use.
+       ExcludeAssets/Private=False because Rhino already ships all of these; only
+       RhinoAI's own output belongs in the plug-in folder. -->
+  <ItemGroup Condition="'$(IsInRhino)' == 'true'">
+    <ProjectReference Include="$(RhinoSrcDir)\DotNetSDK\rhinocommon\dotnet\RhinoCommon.csproj" Private="False" ExcludeAssets="all" />
+    <ProjectReference Include="$(RhinoSrcDir)\DotNetSDK\Rhino.UI\Rhino.UI.csproj" Private="False" ExcludeAssets="all" />
+    <ProjectReference Include="$(RhinoSrcDir)\DotNetSDK\Eto\src\Eto\Eto.csproj" Private="False" ExcludeAssets="all" />
+    <ProjectReference Include="$(RhinoSrcDir)\DotNetSDK\RhinoCode\src\Rhino.Runtime.Code\Rhino.Runtime.Code.csproj" Private="False" ExcludeAssets="all" />
+    <ProjectReference Include="$(RhinoSrcDir)\rhino4\Plug-ins\grasshopper2\Grasshopper2\Grasshopper2.csproj" Private="False" ExcludeAssets="all" />
+    <ProjectReference Include="$(RhinoSrcDir)\rhino4\Plug-ins\grasshopper2\GrasshopperIO\GrasshopperIO.csproj" Private="False" ExcludeAssets="all" />
+  </ItemGroup>
+
+  <!-- GH1 is the one Rhino SDK assembly with no in-tree net8.0 build on Windows:
+       Grasshopper.vbproj is net48-only there, and referencing it from a net8.0 project
+       drags Eto.Wpf and RhinoWindows in transitively, failing the build with NETSDK1136
+       unless the whole plug-in retargets to net8.0-windows. Rhino's own net8.0 GH
+       components (GhPython, ScriptLibrary) sidestep this by building net48 on Windows,
+       which a net8.0-only .rhp cannot do. So GH1's compile-time surface keeps coming
+       from the package in-tree as well; nothing from it is copied into the plug-in
+       folder. Revisit if Grasshopper.vbproj ever gains a net8.0 Windows target. -->
+  <ItemGroup Condition="'$(IsInRhino)' == 'true'">
+    <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- System.Drawing.Common is part of the SDK surface this plug-in compiles against
+       (System.Drawing.Icon / Image / Bitmap on RhinoCommon and Eto APIs), but the
+       project references above carry ExcludeAssets="all", so it no longer arrives
+       transitively the way it did off the RhinoCommon package. Declared here for the
+       same reason export_PDF declares it. ExcludeAssets="runtime" because Rhino already
+       ships it in bin/<Config>/netcore next to RhinoCommon - matching RhinoCommon.csproj,
+       Rhino.UI.csproj and Grasshopper2 - so the plug-in does not load a second, older
+       copy into its own AssemblyLoadContext. 8.0.0 is what $(DotNetSdkPackageVersion)
+       in src4/Directory.Packages.props resolves to for the projects above; this project
+       does not opt into central package management, so the version is spelt out. -->
+  <ItemGroup Condition="'$(IsInRhino)' == 'true'">
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Standalone checkout only. The referenced RhinoCommon version becomes the yak
+       rh8_xx tag, so it is the minimum Rhino 8 service release Package Manager will
+       offer this to. 8.19 is the floor: it is the first 8.x package with net7.0
+       (.NET Core) assets, and everything below is net48-only. Its net7.0 targets add
+       a WindowsForms FrameworkReference unconditionally (fixed in 8.27), which needs
        EnableWindowsTargeting off Windows. -->
-  <PropertyGroup Condition="'$(RhinoTarget)' == 'R8' AND !$([MSBuild]::IsOSPlatform('Windows'))">
+  <PropertyGroup Condition="'$(IsInRhino)' == 'false' AND '$(RhinoTarget)' == 'R8' AND !$([MSBuild]::IsOSPlatform('Windows'))">
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
+  <ItemGroup Condition="'$(IsInRhino)' == 'false' AND '$(RhinoTarget)' == 'R8'">
     <PackageReference Include="RhinoCommon" Version="8.19.25132.1001" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="8.19.25132.1001" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
+  <ItemGroup Condition="'$(IsInRhino)' == 'false' AND '$(RhinoTarget)' == 'R9'">
     <PackageReference Include="RhinoCommon" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" />
     <PackageReference Include="Grasshopper2" Version="9.0.26132.12305-wip" />
@@ -114,8 +170,8 @@
     <Compile Remove="Resources/GH2/**/*.cs" />
   </ItemGroup>
 
-  <!-- Rewrite the manifest's `version:` line from $(Version) so the yak manifest
-       can never drift from the single source in Directory.Build.props. Runs as a
+  <!-- Rewrite the manifest's `version:` line from $(RhinoAIPackageVersion) so the yak
+       manifest can never drift from the single source in Directory.Build.props. Runs as a
        build dependency (keeps the checked-in file in sync) and before the yak
        copy (so the staged package picks up the rewritten value). -->
   <UsingTask TaskName="SyncManifestVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
@@ -150,14 +206,14 @@
   </UsingTask>
 
   <Target Name="SyncManifestVersion" BeforeTargets="Build;BuildYakPackage">
-    <SyncManifestVersion ManifestPath="$(MSBuildProjectDirectory)/manifest.yml" Version="$(Version)" />
+    <SyncManifestVersion ManifestPath="$(MSBuildProjectDirectory)/manifest.yml" Version="$(RhinoAIPackageVersion)" />
   </Target>
 
   <Target Name="BuildYakPackage" AfterTargets="Build">
     <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(YakStagingDir)/" SkipUnchangedFiles="true" />
     <PropertyGroup>
       <_Manifest>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/manifest.yml'))</_Manifest>
-      <_Manifest>$([System.Text.RegularExpressions.Regex]::Replace($(_Manifest), '(?m)^version:.*$', 'version: $(Version)'))</_Manifest>
+      <_Manifest>$([System.Text.RegularExpressions.Regex]::Replace($(_Manifest), '(?m)^version:.*$', 'version: $(RhinoAIPackageVersion)'))</_Manifest>
     </PropertyGroup>
     <WriteLinesToFile File="$(YakStagingDir)/manifest.yml" Lines="$(_Manifest)" Overwrite="true" WriteOnlyWhenDifferent="true" />
   </Target>
@@ -181,8 +237,16 @@
     <Message Importance="high" Text="[Rhino AI] Bundled router RIDs: $(RouterRids)" />
   </Target>
 
-  <!-- Bundle ASP.NET -->
-  <Target Name="BundleAspNetCoreFramework" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
+  <!-- Bundle ASP.NET Core - yak/standalone builds only.
+       Rhino's host does not load the Microsoft.AspNetCore.App shared framework (see
+       netcore/dotnetstart.8.runtimeconfig.json: Microsoft.NETCore.App +
+       Microsoft.WindowsDesktop.App only) and Rhino ships none of it, so a
+       Package-Manager-installed plug-in has to carry its own copy. An in-box build must
+       not: ~110 framework assemblies do not belong in src4/bin/<Config>/Plug-ins/RhinoAI,
+       and whatever ships ASP.NET Core with Rhino should be the one copy everything binds
+       to. Compiling is unaffected either way - the FrameworkReference above resolves
+       against the targeting pack. -->
+  <Target Name="BundleAspNetCoreFramework" AfterTargets="Build" Condition="'$(IsInRhino)' == 'false' AND '$(TargetFramework)' != ''">
     <PropertyGroup>
       <_FxDir Condition="'$(PluginOS)' == 'win'">$(PkgMicrosoft_AspNetCore_App_Runtime_win-x64)/runtimes/win-x64/lib/net8.0</_FxDir>
       <_FxDir Condition="'$(PluginOS)' == 'osx'">$(PkgMicrosoft_AspNetCore_App_Runtime_osx-arm64)/runtimes/osx-arm64/lib/net8.0</_FxDir>
