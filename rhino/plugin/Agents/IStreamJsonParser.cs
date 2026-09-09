@@ -22,6 +22,20 @@ internal interface IStreamJsonParser
     // `codex exec` emits nothing until stdin hits EOF, so the runner closes stdin after the turn.
     public bool IsOneTurnPerProcess { get; }
 
+    // The arguments that ask the CLI whether it is signed in, WITHOUT any interaction or side
+    // effect (`auth status --json` for Claude Code, `login status` for Codex). Empty for a CLI that
+    // cannot be asked, which leaves it permanently Unknown and off the sign-in path.
+    public IReadOnlyList<string> AuthStatusArguments { get; }
+
+    // Read that command's own output and exit code into a verdict. Anything unrecognised MUST come
+    // back Unknown, never SignedOut: a sign-in window the user did not need is worse than a turn
+    // that fails with its ordinary error.
+    public CliLogin.State ReadAuthState(string output, int exitCode);
+
+    // The arguments that start this CLI's interactive sign-in ("auth login", "login"); empty for a
+    // CLI with no such flow.
+    public IReadOnlyList<string> LoginArguments { get; }
+
     // Append all launch args for one process spawn. 'resume' is false on the first spawn (open the
     // session fresh, e.g. --session-id <id>) and true on a respawn after cancel/crash (continue it,
     // e.g. --resume <id>). mcpUrl is this doc's HTTP listener. agentSessionId is the stable

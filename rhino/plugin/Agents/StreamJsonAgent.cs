@@ -59,6 +59,25 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
 
     private string McpUrl { get; set; } = string.Empty;
 
+    // The binary the last spawn resolved to, kept so the sign-in relaunch uses that exact CLI rather
+    // than re-resolving (and possibly picking a different install).
+    private string ExePath { get; set; } = string.Empty;
+
+    // At most one sign-in window per expiry: a user who leaves the terminal sitting there would
+    // otherwise get a fresh one on every prompt. Cleared by a completed turn (proof the login works
+    // again), so a much later second expiry still opens one.
+    private bool LoginLaunched { get; set; }
+
+    // Cancelled on Dispose, so a sign-in watch cannot outlive the agent it belongs to and post into
+    // a conversation the user has already replaced.
+    private CancellationTokenSource Lifetime { get; } = new();
+
+    // How the sign-in watch is paced. The window is generous because it spans a browser round trip
+    // the user drives by hand; the interval only really matters for the first minute, since the
+    // watch stops on the first success.
+    private static TimeSpan SignInPollInterval { get; } = TimeSpan.FromSeconds(4);
+    private static TimeSpan SignInWatchWindow { get; } = TimeSpan.FromMinutes(5);
+
     public StreamJsonAgent(AgentDefinition def, IAcpClient client, Conversation conversation, string cwd, IStreamJsonParser parser)
         : this(def, client, conversation, cwd, parser, resumeSessionId: null)
     {
@@ -176,10 +195,17 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         }
     }
 
-    private Task StartAsync()
+    private async Task StartAsync()
     {
         if (!CliProcess.TryResolve(Definition.AgentPaths, out string path))
             throw new FileNotFoundException(Parser.NotFoundMessage);
+
+        // Deliberately NOT probed before the spawn. `auth status` can report loggedIn:false for a CLI
+        // that then works fine (credentials supplied by a host app rather than its own store), and a
+        // pre-flight check that believed that would lock a working user out of the panel. Asked only
+        // once a turn has already failed, the same wrong answer costs nothing but a stray window.
+        lock (Gate)
+            ExePath = path;
 
         ProcessStartInfo psi = new()
         {
@@ -214,7 +240,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             HasEverStarted = true;
         }
         _ = Task.Run(() => ReadLoopAsync(proc.StandardOutput, proc));
-        return Task.CompletedTask;
+
     }
 
     // The runner resolves the MCP server set from AISettings (the parser stays settings-free). Each
@@ -296,6 +322,11 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                         Push(update);
                     if (parsed.IsTurnComplete)
                         CompleteTurn(token, parsed.Reason, parsed.Usage);
+                    // A turn the CLI itself calls failed is the one moment worth asking why: the
+                    // answer is often an expired login. Asked AFTER the turn resolves, so the probe
+                    // never sits between the user and their (already finished) answer.
+                    if (parsed.IsTurnComplete && parsed.Reason == StopReason.Refusal)
+                        await NoteIfSignedOutAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -305,6 +336,15 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         }
         finally
         {
+            // A CLI that exits mid-turn has either lost the resumed SESSION or lost the LOGIN, and
+            // the two want opposite treatment (silently start fresh vs stop and sign in), so ask the
+            // CLI which before deciding. Only asked when a turn is actually hanging on this exit: a
+            // cancel or a teardown resolved its TCS already and pays nothing.
+            bool hanging;
+            lock (Gate)
+                hanging = ReferenceEquals(Proc, token) && PendingCompletion is null && CurrentTurn is { Task.IsCompleted: false };
+            string signedOut = hanging ? await SignedOutNoticeAsync().ConfigureAwait(false) : string.Empty;
+
             // Read-loop-exit ALWAYS faults the in-flight turn: a CLI that exits without emitting its
             // terminal event must never hang PromptAsync forever. A clean SessionCancelAsync has
             // already won the TCS by here, so this TrySetException is then a no-op.
@@ -332,7 +372,9 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                     // by the original session (Claude rejects a reused --session-id as a collision).
                     // No turn has landed yet, so rotating the ACP-echoed id is safe (the runner already
                     // captured its own SessionId, and RhinoAcpClient routes by Conversation, not id).
-                    if (ResumePending)
+                    // ...unless the CLI is simply signed out, which says nothing about whether the id
+                    // was resumable: rotating it there would burn a perfectly good session.
+                    if (ResumePending && signedOut.Length == 0)
                     {
                         resumeRejected = true;
                         ResumePending = false;
@@ -355,10 +397,94 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                 Conversation.RecordUsage(done.Usage);
                 turn?.TrySetResult(done.Reason);
             }
+            else if (signedOut.Length > 0)
+            {
+                // "process exited" is useless when the CLI just told us why: the fix is a sign-in,
+                // so it goes on the turn AND in the transcript.
+                Conversation.NoteSystem(signedOut);
+                turn?.TrySetException(new IOException(signedOut));
+            }
             else
             {
                 turn?.TrySetException(new IOException($"{Parser.DisplayName} process exited."));
             }
+        }
+    }
+
+    // Ask the CLI whether the user is signed out, and start the sign-in if so. Returns the line to
+    // show, or "" when this was not a sign-in problem (signed in, or the CLI could not say) - the
+    // caller then keeps whatever error it already had.
+    private async Task<string> SignedOutNoticeAsync()
+    {
+        string path;
+        lock (Gate)
+            path = ExePath;
+
+        CliLogin.State state = await CliLogin.ProbeAsync(path, Parser.AuthStatusArguments, Parser.ReadAuthState).ConfigureAwait(false);
+        if (state != CliLogin.State.SignedOut)
+            return string.Empty;
+
+        return StartSignIn(path);
+    }
+
+    // The failed-turn path has no turn left to fault, so the transcript is the whole message.
+    private async Task NoteIfSignedOutAsync()
+    {
+        string note = await SignedOutNoticeAsync().ConfigureAwait(false);
+        if (note.Length > 0)
+            Conversation.NoteSystem(note);
+    }
+
+    // Open the CLI's sign-in in a terminal and return the line the user reads. A launch that fails
+    // degrades to naming the command, which is all the user needs to finish the job by hand.
+    private string StartSignIn(string path)
+    {
+        bool already;
+        lock (Gate)
+        {
+            already = LoginLaunched;
+            LoginLaunched = true;
+        }
+
+        // The binary's own name, not DisplayName: a custom agent can be called anything, and this
+        // is a command the user may have to type.
+        string exe = path.Length > 0 ? Path.GetFileNameWithoutExtension(path) : Parser.DisplayName;
+        string command = $"{exe} {string.Join(' ', Parser.LoginArguments)}";
+        if (already)
+            return $"Still signed out of {Parser.DisplayName}. Finish signing in in the terminal window that opened, then send your message again.";
+        if (!CliLogin.TryStart(path, Parser.LoginArguments, out string error))
+            return $"You are signed out of {Parser.DisplayName}. Run '{command}' in a terminal to sign in, then send your message again ({error}).";
+
+        _ = WatchSignInAsync(path);
+        return $"You are signed out of {Parser.DisplayName}, so '{command}' is now running in a terminal window. Sign in there, then send your message again.";
+    }
+
+    // Say so in the panel the moment the sign-in lands, rather than leaving the user to guess from a
+    // terminal window whether it took. Polled rather than waited on: the login is not reliably our
+    // child process (macOS runs it inside Terminal.app), and the poll stops on the first success, so
+    // the usual sign-in costs a handful of probes.
+    private async Task WatchSignInAsync(string path)
+    {
+        DateTime deadline = DateTime.UtcNow + SignInWatchWindow;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                await Task.Delay(SignInPollInterval, Lifetime.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            CliLogin.State state = await CliLogin.ProbeAsync(path, Parser.AuthStatusArguments, Parser.ReadAuthState).ConfigureAwait(false);
+            if (state != CliLogin.State.SignedIn)
+                continue;
+
+            lock (Gate)
+                LoginLaunched = false; // a later expiry deserves its own window
+            Conversation.NoteSystem($"Signed in to {Parser.DisplayName}. Send your message again.");
+            return;
         }
     }
 
@@ -394,6 +520,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             {
                 turn = CurrentTurn;
                 ResumePending = false; // a turn landed, so the --resume target was accepted
+                LoginLaunched = false; // ...and the login works, so a later expiry may open a window again
                 if (Parser.IsOneTurnPerProcess)
                 {
                     PendingCompletion = new TurnCompletion(reason, usage);
@@ -433,6 +560,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         // Inert when never started: Kill is a no-op while Proc is null (probe-then-dispose in the
         // AgentHost pool must not spawn or tear down anything).
         Kill();
+        Lifetime.Cancel(); // ...and stop any sign-in watch before it posts into a replaced conversation
         TaskCompletionSource<StopReason>? turn;
         lock (Gate)
             turn = CurrentTurn;

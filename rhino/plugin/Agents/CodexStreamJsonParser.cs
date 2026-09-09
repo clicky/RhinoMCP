@@ -26,6 +26,21 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
 
     public bool IsOneTurnPerProcess => true;
 
+    public IReadOnlyList<string> AuthStatusArguments => ["login", "status"];
+
+    public IReadOnlyList<string> LoginArguments => ["login"];
+
+    // `codex login status` answers in prose ("Logged in using ChatGPT"), so the negative is tested
+    // first: "not logged in" contains "logged in".
+    public CliLogin.State ReadAuthState(string output, int exitCode)
+    {
+        if (output.Contains("not logged in", StringComparison.OrdinalIgnoreCase))
+            return CliLogin.State.SignedOut;
+        if (exitCode == 0 && output.Contains("logged in", StringComparison.OrdinalIgnoreCase))
+            return CliLogin.State.SignedIn;
+        return CliLogin.State.Unknown;
+    }
+
     public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
     {
         psi.Environment["CODEX_HOME"] = CodexHome;

@@ -27,6 +27,33 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
 
     public bool IsOneTurnPerProcess => false;
 
+    public IReadOnlyList<string> AuthStatusArguments => ["auth", "status", "--json"];
+
+    public IReadOnlyList<string> LoginArguments => ["auth", "login"];
+
+    // `claude auth status --json` exits 0 either way, so the verdict is the loggedIn field and
+    // nothing else - no field, no JSON, no verdict.
+    public CliLogin.State ReadAuthState(string output, int exitCode)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(output.Trim());
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("loggedIn", out JsonElement loggedIn))
+                return CliLogin.State.Unknown;
+            return loggedIn.ValueKind switch
+            {
+                JsonValueKind.True => CliLogin.State.SignedIn,
+                JsonValueKind.False => CliLogin.State.SignedOut,
+                _ => CliLogin.State.Unknown,
+            };
+        }
+        catch (JsonException)
+        {
+            return CliLogin.State.Unknown;
+        }
+    }
+
     public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
     {
         // Same {"mcpServers":{...}} shape Claude Code expects; rhino points at this doc's HTTP
@@ -130,10 +157,16 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         {
             "assistant" => EmitAssistant(root),
             "user" => EmitToolResults(root),
-            "result" => ParsedLine.Complete(StopReason.EndTurn, ReadUsage(root)),
+            // A failed result still ends the turn, but saying so (rather than reporting every exit
+            // as a clean EndTurn) is what lets the agent ask why - an expired login among the reasons.
+            "result" => ParsedLine.Complete(IsFailure(root) ? StopReason.Refusal : StopReason.EndTurn, ReadUsage(root)),
             _ => ParsedLine.None,
         };
     }
+
+    private static bool IsFailure(JsonElement root) =>
+        (root.TryGetProperty("is_error", out JsonElement isError) && isError.ValueKind == JsonValueKind.True)
+        || Str(root, "subtype") is { Length: > 0 } and not "success";
 
     // The `result` event carries the turn's accounting: a `usage` object with input/output token
     // counts (cache_* fields ignored for the headline number) and a top-level `total_cost_usd`.
