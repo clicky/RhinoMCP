@@ -23,6 +23,7 @@ internal static class GeminiConnection
             CreateNoWindow = true,
             WorkingDirectory = cwd,
         };
+        CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
         psi.ArgumentList.Add("--experimental-acp");
         foreach (string arg in def.ExtraArgs)
