@@ -34,6 +34,8 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
         if (CachedProject is null)
         {
+            ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
+            
             Uri projectFilePath = new(Paths.ProjectFile);
 
             Paths.Directory.EnsureDirectory();
