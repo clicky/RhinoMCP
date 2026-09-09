@@ -216,6 +216,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             CreateNoWindow = true,
             WorkingDirectory = Cwd,
         };
+        CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
         Parser.ConfigureArguments(psi, McpUrl, AgentSessionIdText, ResolveMcpServers(), HasEverStarted);
 

@@ -43,6 +43,7 @@ internal static class CliLogin
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+        CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, cliPath);
         foreach (string argument in statusArguments)
             psi.ArgumentList.Add(argument);
