@@ -9,9 +9,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
-    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
-    <BaseOutputPath>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)/</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(RhinoTarget)/</BaseIntermediateOutputPath>
+    <!-- $(RhinoTarget), $(BaseOutputPath) and $(BaseIntermediateOutputPath) are set in
+         rhino/Directory.Build.props: BaseIntermediateOutputPath is only honoured if it
+         is assigned before Microsoft.Common.props is imported (MSB3539), which cannot
+         happen from inside this file. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/obj/**</DefaultItemExcludes>
   </PropertyGroup>
 
@@ -59,8 +60,11 @@
   </ItemGroup>
 
   <PropertyGroup>
+    <!-- Assembly version attributes come from src4/version.cs in-tree (see
+         rhino/Directory.Build.props) and from $(Version) in a standalone checkout.
+         Program.cs reads AssemblyInformationalVersion for the MCP ServerInfo, so
+         neither the version nor $(Company) is set here. -->
     <Title>Rhino MCP Router</Title>
-    <Company>McNeel</Company>
     <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>
   </PropertyGroup>
 
@@ -71,7 +75,42 @@
          so router and plugin agree at runtime. The 0.4.x preview line targets .NET 10
          packages and won't load under a net8.0 runtime. -->
     <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+  </ItemGroup>
+
+  <!--
+    SQLite provider, split by target OS. Microsoft.Data.Sqlite is a metapackage over
+    .Core + SQLitePCLRaw.bundle_e_sqlite3; taking .Core directly lets the bundle - and
+    so the native engine - be chosen per platform.
+
+    Windows: winsqlite3, the SQLite that ships as part of Windows (10 1803 and later),
+    so the router carries no native SQLite of its own. bundle_e_sqlite3 would drop an
+    e_sqlite3.dll next to the exe that has no VERSIONINFO resource and is unsigned,
+    which the Rhino installer has no good way to version or service - Windows Installer
+    only replaces an unversioned file while its modified date still matches its created
+    date, so it goes stale after anything touches it. SlotStore stays well inside what
+    the in-box engine offers: PRAGMA journal_mode/synchronous/busy_timeout, CREATE TABLE
+    IF NOT EXISTS, plain DML and transactions. Nothing here needs RETURNING, upserts,
+    JSON functions or STRICT tables, which are what would push past the SQLite in older
+    Windows builds. The trade is that the engine version follows the OS instead of being
+    pinned - fine for a slot table, so check this again if the schema gets ambitious.
+
+    macOS: e_sqlite3, exactly as before. There is no system library the NativeAOT
+    publish can bind to, and the Mac installer does not care about Windows version
+    resources.
+
+    RuntimeIdentifier is empty for a plain `dotnet build` (tests and dev loops), so fall
+    back to the build OS there. 2.1.6 is what Microsoft.Data.Sqlite 8.0.10 resolves
+    SQLitePCLRaw to; keep the two in step when either is bumped.
+  -->
+  <PropertyGroup>
+    <RouterUsesWinSqlite Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier.StartsWith('win-'))</RouterUsesWinSqlite>
+    <RouterUsesWinSqlite Condition="'$(RuntimeIdentifier)' == ''">$([MSBuild]::IsOSPlatform('Windows'))</RouterUsesWinSqlite>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.10" />
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.6" Condition="'$(RouterUsesWinSqlite)' == 'true'" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.6" Condition="'$(RouterUsesWinSqlite)' != 'true'" />
   </ItemGroup>
 
   <!--
@@ -91,6 +130,9 @@
   </ItemGroup>
 
   <!--
+    macOS/e_sqlite3 only - a no-op on Windows, where winsqlite3 means there is no
+    native SQLite to place.
+
     AOT publish drops native deps like libe_sqlite3.dylib in $(OutDir), but the
     AOT-linked binary lives in $(OutDir)native/. dlopen searches alongside the
     binary, so without this copy the router crashes on startup with a

@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- The standard Rhino C# library property sheet: .dll TargetExt, the build-type
+       DefineConstants and, via Rhino.Common.props, $(RhinoSrcDir) / $(RhinoOutputDir).
+       Same first import as glTFExtensions.csproj and the other in-box support DLLs.
+       Skipped in a standalone checkout, which has no Rhino source tree. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\..\..\..\RhinoProjectPropertySheets\Rhino.CS.Dll.props" Condition="'$(IsInRhino)' == 'true'" />
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>12</LangVersion>
@@ -12,13 +18,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <!-- Rhino.Common.props supplies $(RhinoOutputDir) (src4/bin/<Config>/ on Windows,
-       bin/<Config>MacRhino/ on macOS). Guarded so a standalone checkout without the
-       Rhino source tree still builds. -->
-  <Import Project="..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props"
-          Condition="Exists('..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props')" />
-
-  <PropertyGroup Condition="'$(RhinoOutputDir)' != '' AND $([MSBuild]::IsOSPlatform('Windows'))">
+  <PropertyGroup Condition="'$(IsInRhino)' == 'true' AND '$(RhinoOutputDir)' != '' AND $([MSBuild]::IsOSPlatform('Windows'))">
     <!-- Build straight into the plug-in's staging folder alongside RhinoAI.rhp
          (src4/bin/<Config>/Plug-ins/RhinoAI/net8.0) instead of a project-local bin,
          so there is a single copy of Acp.dll. $(TargetFramework) is appended by the
