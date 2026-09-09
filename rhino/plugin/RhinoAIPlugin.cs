@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.IO;
 using System.Reflection;
 
@@ -14,18 +13,24 @@ public class RhinoAIPlugin : PlugIn
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 
+    public bool WasStartedViaAgent { get; private set; }
+
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
-        RhinoDoc.NewDocument += Register;
-        RhinoDoc.EndOpenDocument += RegisterOpen;
-
-        CommandInterceptors = new CommandInterceptorHost();
-
-        // Probe agent install paths once on load so the active agent resolves before the first
-        // prompt; Part 1's settings dialog re-runs this when the agent config changes.
         AgentRegistry.Refresh();
 
         Rhino.UI.Panels.RegisterPanel(this, typeof(AIPanel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
+
+        WasStartedViaAgent = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
+
+        if (WasStartedViaAgent || AIAutoLoad.ShouldAutoLoad())
+        {
+            CommandInterceptors = new CommandInterceptorHost();
+
+            RhinoDoc.NewDocument += RegisterNew;
+            RhinoDoc.EndOpenDocument += RegisterOpen;
+        }
+
         return base.OnLoad(ref errorMessage);
     }
 
@@ -62,44 +67,37 @@ public class RhinoAIPlugin : PlugIn
         AgentHost.Shutdown();
     }
 
+    private void RegisterNew(object? sender, DocumentEventArgs e) => Register(e.Document);
+
     private void RegisterOpen(object? sender, DocumentOpenEventArgs e)
     {
         if (e.Merge) return;
         if (e.Reference) return;
-        Register(sender, e);
+        Register(e.Document);
     }
 
-    private void Register(object? sender, DocumentEventArgs e)
-    {   
-        RhinoDoc.NewDocument -= Register;
+    private void Register(RhinoDoc? doc)
+    {
+        if (doc is null) return;
+
+        RhinoDoc.NewDocument -= RegisterNew;
         RhinoDoc.EndOpenDocument -= RegisterOpen;
+
+        if (!WasStartedViaAgent)
+        {
+            if (!RhinoAIHost.TryGetNextPort(out int port))
+            {
+                RhinoApp.WriteLine("RhinoAI's MCP server failed to start: no free port available.");
+            }
+            else if (!RhinoAIHost.StartOrRestart(doc, port, true))
+            {
+                RhinoApp.WriteLine("RhinoAI's MCP Server failed to start");
+            }
+        }
 
         RhinoAIHost.RegisterDocumentWatcher();
 
-        string? portStr = Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar);
-        if (!string.IsNullOrEmpty(portStr))
-            return;
-
-        if (!RhinoAIHost.TryGetNextPort(out int port))
-        {
-            RhinoApp.WriteLine("RhinoAI's MCP server failed to start: no free port available.");
-            return;
-        }
-
-        try
-        {
-            if (RhinoAIHost.StartOrRestart(e.Document, port, true))
-            {
-                ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
-
-                return;
-            }
-        }
-        catch
-        {
-        }
-
-        RhinoApp.WriteLine("RhinoAI's MCP Server failed to start");
+        ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;
