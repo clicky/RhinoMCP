@@ -23,18 +23,28 @@ internal static class AgentRegistry
             .Select(static def => new ResolvedAgent(def, ProbeAvailable(def)))
             .ToArray();
 
-    // The built-in definitions in chain order (Claude first, Codex second), reproducing
-    // today's hardcoded install-dir candidates and empty model/args so out-of-the-box launch
-    // behavior is unchanged. AISettings.GetAgents re-seeds from here on every read.
-    public static IReadOnlyList<AgentDefinition> Builtins() =>
-    [
-        Builtin("claude", AgentAdapter.Claude, "claude", new ClaudeFinder()),
-        Builtin("codex", AgentAdapter.Codex, "codex", new CodexFinder()),
-        Builtin("gemini", AgentAdapter.Gemini, "gemini", new GeminiFinder()),
-    ];
+    public static IReadOnlyList<AgentDefinition> Builtins()
+    {
+        List<AgentDefinition> definitions =
+        [
+            Builtin("claude", AgentAdapter.Claude, new ClaudeFinder()),
+            Builtin("codex", AgentAdapter.Codex, new CodexFinder()),
+        ];
 
-    private static AgentDefinition Builtin(string name, AgentAdapter adapter, string command, IAgentFinder finder) =>
-        new(name, adapter, command, finder.Find(), string.Empty, [], string.Empty, true, true);
+        if (OperatingSystem.IsWindows())
+        {
+            // Builtin("copilot", AgentAdapter.CoPilot, new CopilotFinder());
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            Builtin("gemini", AgentAdapter.Gemini, new GeminiFinder());
+        }
+
+        return definitions;
+    }
+
+    private static AgentDefinition Builtin(string name, AgentAdapter adapter, IAgentFinder finder) =>
+        new(name, adapter, name, finder.Find(), string.Empty, [], string.Empty, true, true);
 
     // The full chain: built-ins (always present, in their seed order) overlaid with custom entries.
     // A custom entry that aliases a built-in name overrides it in place (keeping the built-in's

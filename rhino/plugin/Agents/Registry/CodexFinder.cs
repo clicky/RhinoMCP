@@ -8,21 +8,33 @@ internal class CodexFinder : IAgentFinder
     private static string APPDATA => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
     private static string LOCALAPPDATA => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    // Examples I've seen in the wild
-    // C:\Users\user\AppData\Roaming\Claude\claude-code\2.1.260\claude.exe
-    // C:\Users\user\AppData\Local\Packages\Claude_{gibberish}}\LocalCache\Roaming\Claude\claude-code\2.1.260
-
     public List<string> Find()
     {
         List<string> paths = [];
 
+        // C:\Users\user\AppData\Local\OpenAI\Codex\bin\8618603f6caa97b3
         if (OperatingSystem.IsWindows())
         {
+            string codexBinDir = @"C:\Users\user\AppData\Local\OpenAI\Codex\bin";
+            if (Directory.Exists(codexBinDir))
+            {
+                string? codexCliPath = Directory.EnumerateFiles(codexBinDir, "codex.exe").FirstOrDefault();
+                if (!string.IsNullOrEmpty(codexCliPath))
+                {
+                    paths.Add(codexCliPath);
+                }
+            }
         }
+
         // Mac
+        // /Applications/ChatGPT.app/Contents/Resources/codex
         else if (OperatingSystem.IsMacOS())
         {
-
+            string codexCliPath = "/Applications/ChatGPT.app/Contents/Resources/codex";
+            if (File.Exists(codexCliPath))
+            {
+                paths.Add(codexCliPath);
+            }
         }
 
         // Ensure higher version is higher up

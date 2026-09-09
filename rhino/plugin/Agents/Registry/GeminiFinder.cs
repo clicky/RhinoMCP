@@ -18,7 +18,9 @@ internal class GeminiFinder : IAgentFinder
 
         if (OperatingSystem.IsWindows())
         {
+            // No Windows Desktop App?
         }
+
         // Mac
         else if (OperatingSystem.IsMacOS())
         {
