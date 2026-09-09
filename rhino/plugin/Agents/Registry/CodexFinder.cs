@@ -5,20 +5,21 @@ namespace RhinoAI;
 internal class CodexFinder : IAgentFinder
 {
 
+    private static string USER_PROFILE => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private static string APPDATA => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
     private static string LOCALAPPDATA => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    public List<string> Find()
+    public List<string> Find() 
     {
         List<string> paths = [];
 
         // C:\Users\user\AppData\Local\OpenAI\Codex\bin\8618603f6caa97b3
         if (OperatingSystem.IsWindows())
         {
-            string codexBinDir = @"C:\Users\user\AppData\Local\OpenAI\Codex\bin";
+            string codexBinDir = Path.Combine(LOCALAPPDATA, "OpenAI", "Codex", "bin");
             if (Directory.Exists(codexBinDir))
             {
-                string? codexCliPath = Directory.EnumerateFiles(codexBinDir, "codex.exe").FirstOrDefault();
+                string? codexCliPath = Directory.EnumerateFiles(codexBinDir, "codex.exe", SearchOption.AllDirectories).FirstOrDefault();
                 if (!string.IsNullOrEmpty(codexCliPath))
                 {
                     paths.Add(codexCliPath);
