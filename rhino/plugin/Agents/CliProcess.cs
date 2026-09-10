@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Rhino.AI;
 
@@ -46,6 +47,22 @@ internal static class CliProcess
         {
             psi.FileName = path;
         }
+    }
+
+    // Every CLI here writes UTF-8 on stdout regardless of the machine's codepage, but .NET decodes a
+    // redirected stream with the console codepage on Windows, so an em dash arrives as three CP1252
+    // characters. No BOM on the way in: the CLIs parse stdin as raw JSON lines and a preamble is a
+    // syntax error. Call after the redirect flags are set - naming an encoding for a stream that is
+    // not redirected makes Process.Start throw.
+    public static void ConfigureEncoding(ProcessStartInfo psi)
+    {
+        UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+        if (psi.RedirectStandardInput)
+            psi.StandardInputEncoding = utf8;
+        if (psi.RedirectStandardOutput)
+            psi.StandardOutputEncoding = utf8;
+        if (psi.RedirectStandardError)
+            psi.StandardErrorEncoding = utf8;
     }
 
     private static bool IsBatchShim(string path)
