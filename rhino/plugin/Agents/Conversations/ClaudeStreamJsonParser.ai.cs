@@ -159,9 +159,23 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
             "user" => EmitToolResults(root),
             // A failed result still ends the turn, but saying so (rather than reporting every exit
             // as a clean EndTurn) is what lets the agent ask why - an expired login among the reasons.
-            "result" => ParsedLine.Complete(IsFailure(root) ? StopReason.Refusal : StopReason.EndTurn, ReadUsage(root)),
+            "result" => EmitResult(root),
             _ => ParsedLine.None,
         };
+    }
+
+    private ParsedLine EmitResult(JsonElement root)
+    {
+        if (!IsFailure(root))
+            return ParsedLine.Complete(StopReason.EndTurn, ReadUsage(root));
+
+        string detail = Str(root, "result") is { Length: > 0 } text ? text : Str(root, "subtype");
+        return detail.Length > 0
+            ? ParsedLine.Failed(StopReason.Refusal, new AgentMessageChunkSessionUpdate
+            {
+                Content = new TextContentBlock { Text = $"{DisplayName} failed: {detail}" },
+            })
+            : ParsedLine.Complete(StopReason.Refusal, ReadUsage(root));
     }
 
     private static bool IsFailure(JsonElement root) =>

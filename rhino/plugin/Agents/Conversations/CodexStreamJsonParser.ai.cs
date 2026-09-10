@@ -132,7 +132,7 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
             "item.started" => EmitItemStarted(root),
             "item.completed" => EmitItemCompleted(root),
             "turn.completed" => ParsedLine.Complete(StopReason.EndTurn, ReadUsage(root)),
-            "turn.failed" => ParsedLine.Complete(StopReason.Refusal),
+            "turn.failed" => EmitTurnFailed(root),
             _ => ParsedLine.None,
         };
     }
@@ -155,7 +155,7 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         });
     }
 
-    private static ParsedLine EmitItemCompleted(JsonElement root)
+    private ParsedLine EmitItemCompleted(JsonElement root)
     {
         if (!TryItem(root, out JsonElement item))
             return ParsedLine.None;
@@ -164,8 +164,50 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         {
             "agent_message" => EmitAssistant(item),
             "mcp_tool_call" => EmitToolResult(item),
+            "error" => EmitNote(Str(item, "message")),
             _ => ParsedLine.None,
         };
+    }
+
+    private ParsedLine EmitTurnFailed(JsonElement root) =>
+        ReadFailureMessage(root) is { Length: > 0 } message
+            ? ParsedLine.Failed(StopReason.Refusal, Note($"{DisplayName} failed: {message}"))
+            : ParsedLine.Complete(StopReason.Refusal);
+
+    private ParsedLine EmitNote(string message) =>
+        message.Length > 0 ? ParsedLine.Emit(Note($"{DisplayName}: {message}")) : ParsedLine.None;
+
+    private static AgentMessageChunkSessionUpdate Note(string text) =>
+        new() { Content = new TextContentBlock { Text = text } };
+
+    private static string ReadFailureMessage(JsonElement root)
+    {
+        string raw = root.TryGetProperty("error", out JsonElement error) && error.ValueKind == JsonValueKind.Object
+            ? Str(error, "message")
+            : Str(root, "message");
+        return Unwrap(raw);
+    }
+
+    // Codex nests the upstream API error as an escaped JSON string, which is unreadable in a transcript.
+    private static string Unwrap(string text)
+    {
+        if (text.Length == 0 || text[0] != '{')
+            return text;
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(text);
+            if (doc.RootElement.TryGetProperty("error", out JsonElement inner)
+                && inner.ValueKind == JsonValueKind.Object
+                && inner.TryGetProperty("message", out JsonElement message)
+                && message.ValueKind == JsonValueKind.String)
+                return message.GetString() ?? text;
+        }
+        catch (JsonException)
+        {
+        }
+
+        return text;
     }
 
     private static ParsedLine EmitAssistant(JsonElement item) =>
