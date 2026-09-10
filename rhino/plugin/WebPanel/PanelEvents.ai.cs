@@ -72,7 +72,7 @@ internal sealed record PanelAgent(
     string ModelLabel,
     string Availability,
     string? Detail,
-    bool Builtin);
+    bool Builtin = true);
 
 internal sealed record PanelUsage(int InputTokens, int OutputTokens, decimal? CostUsd);
 

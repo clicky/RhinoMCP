@@ -28,6 +28,40 @@ internal static class AISettings
         set => Settings.SetStringList(nameof(DisabledTools), value);
     }
 
+    // Definitions ship read-only in Definitions.json, so user edits are stored here and layered on at use.
+    public static string[] DisabledAgents
+    {
+        get => Settings.GetStringList(nameof(DisabledAgents), []);
+        set => Settings.SetStringList(nameof(DisabledAgents), value);
+    }
+
+    public static bool IsEnabled(AgentDefinition def) =>
+        def.Enabled && !DisabledAgents.Contains(def.Name, StringComparer.OrdinalIgnoreCase);
+
+    public static void SetAgentEnabled(string name, bool enabled)
+    {
+        string[] remaining = DisabledAgents
+            .Where(n => !string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        DisabledAgents = enabled ? remaining : [.. remaining, name];
+    }
+
+    public static string AgentModel(string name) => Settings.GetString(AgentKey(name, "Model"), string.Empty);
+
+    public static void SetAgentModel(string name, string model) => Settings.SetString(AgentKey(name, "Model"), model);
+
+    public static string AgentPrompt(string name) => Settings.GetString(AgentKey(name, "Prompt"), string.Empty);
+
+    public static void SetAgentPrompt(string name, string prompt) => Settings.SetString(AgentKey(name, "Prompt"), prompt);
+
+    public static string EffectiveModel(AgentDefinition def) =>
+        AgentModel(def.Name) is { Length: > 0 } model ? model : def.DefaultModel;
+
+    public static string EffectivePrompt(AgentDefinition def) =>
+        AgentPrompt(def.Name) is { Length: > 0 } prompt ? prompt : def.DefaultPrompt;
+
+    private static string AgentKey(string name, string field) => $"Agent_{name.ToLowerInvariant()}_{field}";
+
     // Overrides the username-derived name of the plugin manage_plugin_commands writes to.
     public static string? ScriptPluginName
     {
@@ -51,58 +85,6 @@ internal static class AISettings
         Settings.TryGetChild(nameof(Conversations), out PersistentSettings child)
             ? child
             : Settings.AddChild(nameof(Conversations));
-
-    // The full agent chain: built-ins (always present, Claude-first) overlaid with any custom
-    // entries, in chain order. Custom entries that alias a built-in name override the built-in
-    // in place; never duplicated. Built-ins are re-seeded on every read so they can't be lost.
-    public static IReadOnlyList<AgentDefinition> GetAgents() =>
-        AgentRegistry.Overlay(AgentRegistry.Builtins(), DeserializeAgents());
-
-    // Persists the chain. Built-ins are not stored verbatim (they re-seed on read); we store
-    // every entry's settable state so a built-in override (e.g. edited search paths) survives.
-    public static void SetAgents(IReadOnlyList<AgentDefinition> agents) =>
-        Settings.SetString(AgentsKey, JsonSerializer.Serialize(agents, McpSerializer.Options));
-
-    private const string AgentsKey = "Agents";
-
-    private static IReadOnlyList<AgentDefinition> DeserializeAgents()
-    {
-        string json = Settings.GetString(AgentsKey, string.Empty);
-        if (string.IsNullOrWhiteSpace(json))
-            return [];
-        try
-        {
-            AgentDefinition[]? parsed = JsonSerializer.Deserialize<AgentDefinition[]>(json, McpSerializer.Options);
-            return parsed ?? [];
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
-
-    // Model identifiers the user has typed into the Model dropdown, remembered per adapter so they
-    // reappear as choices. Kept separate from KnownModels (the built-in seeds) and merged on read.
-    public static IReadOnlyList<string> GetCustomModels(AgentAdapter adapter) =>
-        Settings.GetStringList(CustomModelsKey(adapter), []);
-
-    // Remembers a user-typed model for its adapter. No-ops for blanks, built-in seeds, and
-    // already-remembered values so the stored list stays a clean set of genuinely custom entries.
-    public static void RememberCustomModel(AgentAdapter adapter, string model)
-    {
-        string trimmed = model.Trim();
-        if (trimmed.Length == 0 || KnownModels.For(adapter).Contains(trimmed, StringComparer.OrdinalIgnoreCase))
-            return;
-
-        string[] existing = Settings.GetStringList(CustomModelsKey(adapter), []);
-        if (existing.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
-            return;
-
-        string[] updated = [.. existing, trimmed];
-        Settings.SetStringList(CustomModelsKey(adapter), updated);
-    }
-
-    private static string CustomModelsKey(AgentAdapter adapter) => $"CustomModels_{adapter}";
 
     public static int StartingPort
     {

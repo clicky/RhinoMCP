@@ -24,5 +24,8 @@ internal readonly record struct ParsedLine(
 
     public static ParsedLine Complete(StopReason reason, TokenUsage usage = default) => new([], true, reason, usage, null);
 
+    // A CLI-reported failure carries its reason into the transcript, so the turn never just stops with nothing shown.
+    public static ParsedLine Failed(StopReason reason, params SessionUpdate[] updates) => new(updates, true, reason, TokenUsage.Empty, null);
+
     public static ParsedLine Session(string sessionId) => new([], false, StopReason.EndTurn, TokenUsage.Empty, sessionId);
 }

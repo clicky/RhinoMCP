@@ -18,9 +18,8 @@ internal sealed class AISettingsPanel : Panel
     private Label NameHeader { get; } = new() { Font = Fonts.Sans(13, FontStyle.Bold) };
     private Label AvailableLabel { get; } = new();
     private CheckBox EnabledBox { get; } = new() { Text = "Enabled" };
-    private ComboBox ModelBox { get; } = new() { AutoComplete = true };
-    private TextArea SearchPathsBox { get; } = new() { Wrap = false, Height = 70 };
-    private TextArea ExtraArgsBox { get; } = new() { Wrap = false, Height = 90 };
+    private DropDown ModelBox { get; } = new();
+    private TextArea SearchPathsBox { get; } = new() { Wrap = false, Height = 70, ReadOnly = true };
     private TextArea SystemPromptBox { get; } = new() { Wrap = true, Height = 90 };
 
     private TextArea McpJsonBox { get; } = new() { Wrap = false, Font = Fonts.Monospace(11) };
@@ -71,14 +70,15 @@ internal sealed class AISettingsPanel : Panel
         }
         McpErrorLabel.Visible = false;
 
-        AgentDefinition[] definitions = Rows.Select(ToDefinition).ToArray();
-        AISettings.SetAgents(definitions);
-
         foreach (AgentRow row in Rows)
-            AISettings.RememberCustomModel(row.Adapter, row.Model);
+        {
+            AISettings.SetAgentEnabled(row.Name, row.Enabled);
+            AISettings.SetAgentModel(row.Name, row.Model);
+            AISettings.SetAgentPrompt(row.Name, row.SystemPrompt);
+        }
 
-        AgentRow defaultRow = Rows.FirstOrDefault(r => r.IsDefault) ?? Rows.First();
-        AISettings.DefaultAgentName = defaultRow.Name;
+        if (Rows.FirstOrDefault(r => r.IsDefault) is AgentRow defaultRow)
+            AISettings.DefaultAgentName = defaultRow.Name;
 
         AISettings.ExtraMcpServersJson = normalizedJson;
 
@@ -94,23 +94,18 @@ internal sealed class AISettingsPanel : Panel
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        AgentRegistry.Refresh();
         return true;
     }
 
     private void SeedRows()
     {
-        AgentRegistry.Refresh();
-        Dictionary<string, bool> available = AgentRegistry.Chain
-            .ToDictionary(r => r.Definition.Name, r => r.Available, StringComparer.OrdinalIgnoreCase);
-
         string defaultName = AISettings.DefaultAgentName;
         bool anyDefault = false;
-        foreach (AgentDefinition def in AISettings.GetAgents())
+        foreach (AgentDefinition def in AgentRegistry.Instance.AllDefinitions)
         {
             bool isDefault = string.Equals(def.Name, defaultName, StringComparison.OrdinalIgnoreCase);
             anyDefault |= isDefault;
-            Rows.Add(AgentRow.From(def, available.GetValueOrDefault(def.Name, false), isDefault));
+            Rows.Add(AgentRow.From(def, isDefault));
         }
 
         if (!anyDefault && Rows.Count > 0)
@@ -142,20 +137,8 @@ internal sealed class AISettingsPanel : Panel
         AgentGrid.SelectionChanged += (_, _) => LoadEditor();
         AgentGrid.ContextMenu = BuildGridContextMenu();
 
-        Button addButton = new() { Text = "Add Custom..." };
-        addButton.Click += (_, _) => AddCustom();
-
-        StackLayout rowButtons = new()
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 6,
-            Items = { addButton },
-        };
-
         EnabledBox.CheckedChanged += (_, _) => WriteEditor(row => row.Enabled = EnabledBox.Checked == true);
-        ModelBox.TextChanged += (_, _) => WriteEditor(row => row.Model = CurrentModelValue());
-        SearchPathsBox.TextChanged += (_, _) => WriteEditor(row => row.SearchPathsText = SearchPathsBox.Text);
-        ExtraArgsBox.TextChanged += (_, _) => WriteEditor(row => row.ExtraArgsText = ExtraArgsBox.Text);
+        ModelBox.SelectedValueChanged += (_, _) => WriteEditor(row => row.Model = CurrentModelValue());
         SystemPromptBox.TextChanged += (_, _) => WriteEditor(row => row.SystemPrompt = SystemPromptBox.Text);
 
         StackLayout left = new()
@@ -166,7 +149,6 @@ internal sealed class AISettingsPanel : Panel
             Items =
             {
                 new StackLayoutItem(AgentGrid, expand: true),
-                rowButtons,
             },
         };
 
@@ -179,9 +161,8 @@ internal sealed class AISettingsPanel : Panel
                 new TableRow(AvailableLabel),
                 new TableRow(EnabledBox),
                 new TableRow(LabeledColumn("Model:", ModelBox)),
-                new TableRow(LabeledColumn("Search paths (one per line):", SearchPathsBox)),
-                new TableRow(LabeledColumn("Extra args (one per line):", ExtraArgsBox)),
-                new TableRow(LabeledColumn("Default prompt:", SystemPromptBox)),
+                new TableRow(LabeledColumn("Found at:", SearchPathsBox)),
+                new TableRow(LabeledColumn("Prompt:", SystemPromptBox)),
                 new TableRow { ScaleHeight = true },
             },
         };
@@ -203,9 +184,6 @@ internal sealed class AISettingsPanel : Panel
         return layout;
     }
 
-    private static TableRow LabeledRow(string label, Control control) =>
-        new(new TableCell(new Label { Text = label }), new TableCell(control, true));
-
     // Label stacked above its control, so a multi-line box gets full width instead of a left-hand label
     // eating into it.
     private static Control LabeledColumn(string label, Control control) =>
@@ -215,44 +193,23 @@ internal sealed class AISettingsPanel : Panel
             Rows = { new TableRow(new Label { Text = label }), new TableRow(new TableCell(control, true)) },
         };
 
-    // Right-click menu on the grid: the row actions (Add / Set Default / Reset / Remove) plus
-    // reordering (Up / Down) that has no button. Enabled state is recomputed on open so Remove stays
-    // disabled for built-ins, Up/Down disable at the ends, and nothing is actionable without a selection.
     private ContextMenu BuildGridContextMenu()
     {
-        ButtonMenuItem add = new() { Text = "Add Custom..." };
-        add.Click += (_, _) => AddCustom();
         ButtonMenuItem setDefault = new() { Text = "Set Default" };
         setDefault.Click += (_, _) => SetSelectedDefault();
         ButtonMenuItem reset = new() { Text = "Restore Defaults" };
         reset.Click += (_, _) => ResetSelected();
-        ButtonMenuItem remove = new() { Text = "Remove" };
-        remove.Click += (_, _) => RemoveSelected();
-        ButtonMenuItem moveUp = new() { Text = "Move Up" };
-        moveUp.Click += (_, _) => MoveSelected(-1);
-        ButtonMenuItem moveDown = new() { Text = "Move Down" };
-        moveDown.Click += (_, _) => MoveSelected(1);
 
-        ContextMenu menu = new()
-        {
-            Items = { add, setDefault, reset, remove, new SeparatorMenuItem(), moveUp, moveDown },
-        };
+        ContextMenu menu = new() { Items = { setDefault, reset } };
         menu.Opening += (_, _) =>
         {
-            bool hasSelection = TryGetSelected(out AgentRow row);
-            int index = hasSelection ? Rows.IndexOf(row) : -1;
+            bool hasSelection = TryGetSelected(out AgentRow _);
             setDefault.Enabled = hasSelection;
             reset.Enabled = hasSelection;
-            remove.Enabled = hasSelection && !row.IsBuiltin;
-            moveUp.Enabled = index > 0;
-            moveDown.Enabled = index >= 0 && index < Rows.Count - 1;
         };
         return menu;
     }
 
-    // Restores the selected agent's editable fields to their out-of-the-box defaults: default search
-    // paths for its command, and an empty model/args/prompt (so the CLI defaults apply). Name, adapter,
-    // command, and the default-agent flag are identity, not settings, so they are left untouched.
     private void ResetSelected()
     {
         if (!TryGetSelected(out AgentRow row))
@@ -260,36 +217,20 @@ internal sealed class AISettingsPanel : Panel
 
         DialogResult confirm = MessageBox.Show(
             this,
-            $"Reset \"{PrettyName.Of(row.Name)}\" to its default settings? This clears its model, extra args, prompt, "
-                + "and search paths, and re-enables it.",
+            $"Reset \"{PrettyName.Of(row.Name)}\" to its default settings? This clears its model and prompt, "
+                + "and re-enables it.",
             "Reset Agent",
             MessageBoxButtons.YesNo,
             MessageBoxType.Question);
         if (confirm != DialogResult.Yes)
             return;
 
-        AgentRegistry.TryGet(row.Command, out AgentDefinition def);
-
-        row.SearchPathsText = string.Join(Environment.NewLine, def.AgentPaths);
         row.Model = string.Empty;
-        row.ExtraArgsText = string.Empty;
         row.SystemPrompt = string.Empty;
         row.Enabled = true;
 
         ReloadGrid();
         LoadEditor();
-    }
-
-    private void MoveSelected(int delta)
-    {
-        if (!TryGetSelected(out AgentRow row))
-            return;
-        int index = Rows.IndexOf(row);
-        int target = index + delta;
-        if (target < 0 || target >= Rows.Count)
-            return;
-        Rows.Move(index, target);
-        AgentGrid.SelectedRow = target;
     }
 
     private void LoadEditor()
@@ -305,7 +246,6 @@ internal sealed class AISettingsPanel : Panel
                 EnabledBox.Checked = row.Enabled;
                 LoadModelBox(row);
                 SearchPathsBox.Text = row.SearchPathsText;
-                ExtraArgsBox.Text = row.ExtraArgsText;
                 SystemPromptBox.Text = row.SystemPrompt;
                 EnableEditor(true);
             }
@@ -315,9 +255,7 @@ internal sealed class AISettingsPanel : Panel
                 AvailableLabel.Text = string.Empty;
                 EnabledBox.Checked = false;
                 ModelBox.Items.Clear();
-                ModelBox.Text = string.Empty;
                 SearchPathsBox.Text = string.Empty;
-                ExtraArgsBox.Text = string.Empty;
                 SystemPromptBox.Text = string.Empty;
                 EnableEditor(false);
             }
@@ -331,33 +269,25 @@ internal sealed class AISettingsPanel : Panel
     private void LoadModelBox(AgentRow row)
     {
         ModelBox.Items.Clear();
-        ModelBox.Items.Add(DefaultModelLabel);
-        foreach (string model in ModelChoices(row.Adapter))
-            ModelBox.Items.Add(PrettyName.Of(model));
-        ModelBox.Text = row.Model.Length > 0 ? PrettyName.Of(row.Model) : DefaultModelLabel;
+        ModelBox.Items.Add(new ListItem
+        {
+            Text = row.DefaultModel.Length > 0 ? $"{DefaultModelLabel} - {PrettyName.Of(row.DefaultModel)}" : DefaultModelLabel,
+            Key = string.Empty,
+        });
+
+        foreach (ModelSpec spec in row.Models)
+            ModelBox.Items.Add(new ListItem { Text = spec.Display, Key = spec.Id });
+
+        ModelBox.SelectedKey = row.Model;
     }
 
-    // The Model dropdown choices for an adapter: its built-in seeds, then any models the user typed
-    // before (remembered per adapter). The "(default)" sentinel is added separately, ahead of these.
-    private static IEnumerable<string> ModelChoices(AgentAdapter adapter) =>
-        KnownModels.For(adapter)
-            .Concat(AISettings.GetCustomModels(adapter))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-    // The Model box's current text as a stored value, collapsing the "(default)" sentinel to empty so it
-    // is never persisted or passed as a literal --model value. Model ids are lowercase by convention and
-    // --model is passed through verbatim, so normalise to lowercase here and let display re-prettify.
-    private string CurrentModelValue() =>
-        string.Equals(ModelBox.Text, DefaultModelLabel, StringComparison.Ordinal)
-            ? string.Empty
-            : ModelBox.Text.Trim().ToLowerInvariant();
+    // The "(default)" sentinel carries an empty key, so picking it falls back to the definition's own model.
+    private string CurrentModelValue() => ModelBox.SelectedKey ?? string.Empty;
 
     private void EnableEditor(bool enabled)
     {
         EnabledBox.Enabled = enabled;
         ModelBox.Enabled = enabled;
-        SearchPathsBox.Enabled = enabled;
-        ExtraArgsBox.Enabled = enabled;
         SystemPromptBox.Enabled = enabled;
     }
 
@@ -395,105 +325,6 @@ internal sealed class AISettingsPanel : Panel
         if (Rows.Count == 0)
             return;
         AgentGrid.ReloadData(new Eto.Forms.Range<int>(0, Rows.Count - 1));
-    }
-
-    private void AddCustom()
-    {
-        if (!TryPromptCustom(out string name, out AgentAdapter adapter))
-            return;
-
-        if (Rows.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
-        {
-            MessageBox.Show(this, $"An agent named \"{name}\" already exists.", "Add Custom Agent", MessageBoxButtons.OK, MessageBoxType.Warning);
-            return;
-        }
-
-        string command = adapter switch
-        {
-            AgentAdapter.Claude => "claude",
-            AgentAdapter.Codex => "codex",
-            _ => name,
-        };
-
-        AgentRegistry.TryGet(command, out AgentDefinition def);
-
-        AgentRow row = new(
-            name: name,
-            adapter: adapter,
-            command: command,
-            searchPathsText: string.Join(Environment.NewLine, def.AgentPaths),
-            model: string.Empty,
-            extraArgsText: string.Empty,
-            systemPrompt: string.Empty,
-            enabled: true,
-            isBuiltin: false,
-            isDefault: false,
-            available: false);
-
-        Rows.Add(row);
-        AgentGrid.SelectedRow = Rows.Count - 1;
-    }
-
-    private bool TryPromptCustom(out string name, out AgentAdapter adapter)
-    {
-        name = string.Empty;
-        adapter = AgentAdapter.Claude;
-
-        TextBox nameBox = new();
-        DropDown adapterBox = new();
-        foreach (AgentAdapter value in Enum.GetValues<AgentAdapter>())
-            adapterBox.Items.Add(value.ToString());
-        adapterBox.SelectedIndex = 0;
-
-        Dialog<bool> prompt = new()
-        {
-            Title = "Add Custom Agent",
-            Padding = new Padding(12),
-            MinimumSize = new Size(320, 0),
-        };
-
-        Button ok = new() { Text = "Add" };
-        ok.Click += (_, _) => prompt.Close(true);
-        Button cancel = new() { Text = "Cancel" };
-        cancel.Click += (_, _) => prompt.Close(false);
-
-        prompt.Content = new TableLayout
-        {
-            Spacing = new Size(8, 6),
-            Rows =
-            {
-                LabeledRow("Name:", nameBox),
-                LabeledRow("Based on:", adapterBox),
-                new TableRow(new TableCell(), new TableCell(new StackLayout
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 8,
-                    HorizontalContentAlignment = HorizontalAlignment.Right,
-                    Items = { null, cancel, ok },
-                })),
-            },
-        };
-        prompt.DefaultButton = ok;
-        prompt.AbortButton = cancel;
-
-        if (!prompt.ShowModal(this))
-            return false;
-
-        string entered = nameBox.Text?.Trim() ?? string.Empty;
-        if (entered.Length == 0)
-            return false;
-
-        name = entered;
-        adapter = Enum.GetValues<AgentAdapter>()[adapterBox.SelectedIndex];
-        return true;
-    }
-
-    private void RemoveSelected()
-    {
-        if (!TryGetSelected(out AgentRow row) || row.IsBuiltin)
-            return;
-        Rows.Remove(row);
-        LoadEditor();
     }
 
     private Control McpServersTab()
@@ -642,24 +473,6 @@ internal sealed class AISettingsPanel : Panel
         catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t is not null)!; }
     }
 
-    private static AgentDefinition ToDefinition(AgentRow row) =>
-        new(
-            row.Name,
-            row.Adapter,
-            row.Command,
-            SplitLines(row.SearchPathsText),
-            row.Model.Trim(),
-            SplitLines(row.ExtraArgsText),
-            row.SystemPrompt,
-            row.Enabled,
-            row.IsBuiltin);
-
-    private static IReadOnlyList<string> SplitLines(string text) =>
-        text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0)
-            .ToArray();
-
     private static string PrettyJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -732,59 +545,49 @@ internal sealed class AISettingsPanel : Panel
         }
     }
 
-    // Mutable view-model backing the agent grid + editor. Converted to/from the immutable
-    // AgentDefinition record at the boundary; IsBuiltin and Adapter are carried through
-    // unchanged so editing a built-in never silently turns it into a custom entry.
+    // Only Model, SystemPrompt, Enabled and IsDefault are user-editable; the rest mirrors the definition.
     private sealed class AgentRow
     {
         public string Name { get; }
-        public AgentAdapter Adapter { get; }
-        public string Command { get; }
-        public bool IsBuiltin { get; }
         public bool Available { get; }
+        public string SearchPathsText { get; }
+        public IReadOnlyList<ModelSpec> Models { get; }
+        public string DefaultModel { get; }
 
-        public string SearchPathsText { get; set; }
         public string Model { get; set; }
-        public string ExtraArgsText { get; set; }
         public string SystemPrompt { get; set; }
         public bool Enabled { get; set; }
         public bool IsDefault { get; set; }
 
         public string DefaultGlyph => IsDefault ? "★" : string.Empty;
 
-        // Grid shows the agent title-cased ("Claude"); Name keeps the raw lowercase identity used for
-        // matching, the default-agent key, and commit.
         public string NameDisplay => PrettyName.Of(Name);
 
         public AgentRow(
-            string name, AgentAdapter adapter, string command, string searchPathsText, string model,
-            string extraArgsText, string systemPrompt, bool enabled, bool isBuiltin, bool isDefault, bool available)
+            string name, bool available, string searchPathsText, IReadOnlyList<ModelSpec> models,
+            string defaultModel, string model, string systemPrompt, bool enabled, bool isDefault)
         {
             Name = name;
-            Adapter = adapter;
-            Command = command;
+            Available = available;
             SearchPathsText = searchPathsText;
+            Models = models;
+            DefaultModel = defaultModel;
             Model = model;
-            ExtraArgsText = extraArgsText;
             SystemPrompt = systemPrompt;
             Enabled = enabled;
-            IsBuiltin = isBuiltin;
             IsDefault = isDefault;
-            Available = available;
         }
 
-        public static AgentRow From(AgentDefinition def, bool available, bool isDefault) =>
+        public static AgentRow From(AgentDefinition def, bool isDefault) =>
             new(
                 def.Name,
-                def.Adapter,
-                def.Command,
-                string.Join(Environment.NewLine, def.AgentPaths),
-                def.Model,
-                string.Join(Environment.NewLine, def.ExtraArgs),
-                def.SystemPrompt,
-                def.Enabled,
-                def.IsBuiltin,
-                isDefault,
-                available);
+                def.Available,
+                string.Join(Environment.NewLine, def.SearchPaths.GetPaths()),
+                def.Models,
+                def.DefaultModel,
+                AISettings.AgentModel(def.Name),
+                AISettings.AgentPrompt(def.Name),
+                AISettings.IsEnabled(def),
+                isDefault);
     }
 }
