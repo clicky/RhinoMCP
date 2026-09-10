@@ -47,7 +47,6 @@
     {
       "name": "Codex",
       "company": "OpenAI",
-      "defaultModel": "GPT-5.5",
       "isBuiltIn": true,
       "defaultPrompt" : "",
       "searchPaths": {
@@ -73,7 +72,6 @@
     {
       "name": "Gemini",
       "company": "Google",
-      "defaultModel": "gemini-2.5-flash",
       "isBuiltIn": true,
       "defaultPrompt" : "",
       "searchPaths": {
