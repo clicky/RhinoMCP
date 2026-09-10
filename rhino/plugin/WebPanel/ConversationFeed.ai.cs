@@ -261,7 +261,7 @@ internal sealed class ConversationFeed
     {
         bool finished = !string.IsNullOrWhiteSpace(ev.Result);
         bool failed = finished && (ev.Failed || ToolSummary.IsFailure(ev.Result));
-        string name = ToolSummary.Bare(ev.Text);
+        string name = ToolSummary.RemoveUnderscoreUnderscoreNaming(ev.Text);
         return new PanelToolCall(
             callId,
             name,

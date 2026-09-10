@@ -2,22 +2,15 @@ using System.Text.Json;
 
 namespace Rhino.AI;
 
-// Turns a tool call (name + raw input/output JSON) into a short human-readable chip header, e.g.
-// "ran python", "placed Circle", "opened model.3dm". Pure and dumb: no Eto, no state, just string in
-// / string out. The raw JSON still lives behind the chip's expander, so this never has to be
-// lossless. Unknown tools fall back to a generic "<tool>: ok" / "<tool>: failed".
-//
-// Inputs are best-effort: args/result may be empty (call still streaming) or malformed; every read
-// is guarded and degrades to the generic phrase rather than throwing into the render path.
+/// <summary>
+/// Makes verbose tool call names into something simpler
+/// </summary>
 internal static class ToolSummary
 {
-    // Agents see our tools through MCP, which namespaces them as mcp__<server>__<tool>. Every switch
-    // below is keyed on the registered name, so without stripping the prefix nothing ever matched and
-    // every call fell through to the generic "<tool>" phrasing.
-    //
-    // The server segment is dropped rather than kept: a foreign MCP tool loses which server it came
-    // from, which is a fair trade for the Rhino tools reading properly, and its arguments still say.
-    public static string Bare(string toolName)
+    /// <summary>
+    /// Tools are named mcp__thing__tool which is verbose, this cleans up
+    /// </summary>
+    public static string RemoveUnderscoreUnderscoreNaming(string toolName)
     {
         const string prefix = "mcp__";
         if (!toolName.StartsWith(prefix, StringComparison.Ordinal))
@@ -30,27 +23,21 @@ internal static class ToolSummary
     // result is empty while the call is still in flight; show the in-progress verb without a verdict.
     public static string Describe(string rawToolName, string argsJson, string resultJson, bool reportedFailure = false)
     {
-        string toolName = Bare(rawToolName);
+        string toolName = RemoveUnderscoreUnderscoreNaming(rawToolName);
         bool hasResult = !string.IsNullOrWhiteSpace(resultJson);
         bool failed = hasResult && (reportedFailure || IsFailure(resultJson));
 
-        string? phrase = Phrase(toolName, argsJson, resultJson, failed);
-        if (phrase is not null)
-            return phrase;
-
-        // Generic fallback keyed only on success/failure: the name carries the rest.
-        return hasResult
-            ? $"{toolName}: {(failed ? "failed" : "ok")}"
-            : toolName;
+        string phrase = Phrase(toolName, argsJson, resultJson, failed);
+        return phrase;
     }
 
     // Per-tool phrasing. Returns null to defer to the generic fallback (unknown tool or unreadable
     // payload). A leading failure verb is preferred over a misleading success phrase.
-    private static string? Phrase(string toolName, string argsJson, string resultJson, bool failed)
+    private static string Phrase(string toolName, string argsJson, string resultJson, bool failed)
     {
         if (failed)
             return $"{Verb(toolName)} failed";
-
+    
         return toolName switch
         {
             "run_python" => "ran python",
@@ -82,7 +69,10 @@ internal static class ToolSummary
             "g1_apply_graph" or "g2_apply_graph" => "applied a graph",
             "g1_solve_graph" or "g2_solve_canvas" => Solved(resultJson),
 
-            _ => null,
+            null => "unknown tool",
+
+            _ => toolName.Replace("_", ""),
+
         };
     }
 
@@ -128,7 +118,7 @@ internal static class ToolSummary
     // A short failure verb per tool family so "X failed" reads naturally.
     private static string Verb(string rawToolName)
     {
-        string toolName = Bare(rawToolName);
+        string toolName = RemoveUnderscoreUnderscoreNaming(rawToolName);
         return toolName switch
         {
             "run_python" => "python",
@@ -137,7 +127,9 @@ internal static class ToolSummary
             "open_doc" => "open",
             "save_doc" => "save",
             "close_doc" => "close",
+            
             _ when toolName.StartsWith("g1_") || toolName.StartsWith("g2_") => "Grasshopper",
+
             _ => toolName,
         };
     }

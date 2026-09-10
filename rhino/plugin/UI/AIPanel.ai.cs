@@ -326,7 +326,7 @@ public class AIPanel : Panel
             entries.Add(new PanelHistoryEntry(
                 convo.SessionId,
                 Title(convo),
-                PrettyName.Of(convo.AgentName),
+                convo.AgentName,
                 convo.DocTitle,
                 convo.StartedAt.ToString("O"),
                 convo.Turns.Count,
@@ -389,7 +389,7 @@ public class AIPanel : Panel
 
         if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", $"Cannot resume: agent '{PrettyName.Of(dto.AgentName)}' is no longer available."));
+            Bridge.Post(new NoticeEvent("error", $"Cannot resume: agent '{dto.AgentName}' is no longer available."));
             return;
         }
 
@@ -590,9 +590,9 @@ public class AIPanel : Panel
             string model = AISettings.EffectiveModel(definition) is { Length: > 0 } chosen ? chosen : "default";
             agents.Add(new PanelAgent(
                 definition.Name,
-                PrettyName.Of(definition.Name),
+                definition.Name,
                 model,
-                PrettyName.Of(model),
+                definition.Models.FirstOrDefault(spec => spec.Id == model)?.Display ?? model,
                 availability,
                 availability switch
                 {

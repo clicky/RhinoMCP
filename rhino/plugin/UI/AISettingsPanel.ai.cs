@@ -128,7 +128,7 @@ internal sealed class AISettingsPanel : Panel
         {
             HeaderText = "Agent",
             HeaderTextAlignment = TextAlignment.Center,
-            DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.NameDisplay), TextAlignment = TextAlignment.Center },
+            DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.Name), TextAlignment = TextAlignment.Center },
             Editable = false,
             Resizable = false,
             Width = 140,
@@ -217,7 +217,7 @@ internal sealed class AISettingsPanel : Panel
 
         DialogResult confirm = MessageBox.Show(
             this,
-            $"Reset \"{PrettyName.Of(row.Name)}\" to its default settings? This clears its model and prompt, "
+            $"Reset \"{row.Name}\" to its default settings? This clears its model and prompt, "
                 + "and re-enables it.",
             "Reset Agent",
             MessageBoxButtons.YesNo,
@@ -240,7 +240,7 @@ internal sealed class AISettingsPanel : Panel
         {
             if (TryGetSelected(out AgentRow row))
             {
-                NameHeader.Text = row.NameDisplay;
+                NameHeader.Text = row.Name;
                 AvailableLabel.Text = row.Available ? "✓ Found on search paths" : "✗ Not found on search paths";
                 AvailableLabel.TextColor = row.Available ? Colors.Green : Colors.Red;
                 EnabledBox.Checked = row.Enabled;
@@ -271,7 +271,7 @@ internal sealed class AISettingsPanel : Panel
         ModelBox.Items.Clear();
         ModelBox.Items.Add(new ListItem
         {
-            Text = row.DefaultModel.Length > 0 ? $"{DefaultModelLabel} - {PrettyName.Of(row.DefaultModel)}" : DefaultModelLabel,
+            Text = row.DefaultModel.Length > 0 ? $"{DefaultModelLabel} - {row.Models.FirstOrDefault(spec => spec.Id == row.DefaultModel)?.Display ?? row.DefaultModel}" : DefaultModelLabel,
             Key = string.Empty,
         });
 
@@ -560,8 +560,6 @@ internal sealed class AISettingsPanel : Panel
         public bool IsDefault { get; set; }
 
         public string DefaultGlyph => IsDefault ? "★" : string.Empty;
-
-        public string NameDisplay => PrettyName.Of(Name);
 
         public AgentRow(
             string name, bool available, string searchPathsText, IReadOnlyList<ModelSpec> models,
