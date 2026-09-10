@@ -12,7 +12,7 @@ using Rhino.PlugIns;
 [assembly: PlugInDescription(DescriptionType.UpdateUrl, "http://www.updates.mcneel.com")]
 [assembly: PlugInDescription(DescriptionType.WebSite, "https://mcneel.github.io/RhinoAI/")]
 
-[assembly: PlugInDescription(DescriptionType.Icon, "Rhino.AI.logo.ico")]
+[assembly: PlugInDescription(DescriptionType.Icon, "Rhino.AI.Panel_light.ico")]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 // This will also be the Guid of the Rhino plug-in
