@@ -8,7 +8,8 @@ namespace Rhino.AI;
 
 internal sealed class AIOptionsPage : OptionsDialogPage
 {
-    private const string IconResourceName = "Rhino.AI.logo.svg";
+    private const string IconResourceName = "Rhino.AI.Panel_light.svg";
+    private const string DarkIconResourceName = "Rhino.AI.Panel_dark.svg";
 
     private AISettingsPanel Panel { get; } = new();
     private Image? LightCachedImage { get; set; }
@@ -24,8 +25,8 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     // Mac's Settings UI lists pages by icon; a page with no PageImage never shows in the navigation.
     public override Image PageImage => HostUtils.RunningInDarkMode switch
     {
-        true => DarkCachedImage ??= LoadIcon(true),
-        _ => LightCachedImage ??= LoadIcon(false),
+        true => DarkCachedImage ??= LoadIcon(DarkIconResourceName),
+        _ => LightCachedImage ??= LoadIcon(IconResourceName),
     };
 
     public override bool OnApply() => Panel.TryCommit(out _);
@@ -37,15 +38,17 @@ internal sealed class AIOptionsPage : OptionsDialogPage
         return base.OnActivate(active);
     }
 
-    private static Bitmap LoadIcon(bool darkMode)
+    private static Bitmap LoadIcon(string resourceName)
     {
         Assembly assembly = typeof(AIOptionsPage).Assembly;
-        using Stream stream = assembly.GetManifestResourceStream(IconResourceName)
-            ?? throw new InvalidOperationException($"Embedded icon resource '{IconResourceName}' is missing.");
+        using Stream stream = assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded icon resource '{resourceName}' is missing.");
+
         using StreamReader reader = new(stream);
         string svg = reader.ReadToEnd();
 
+        // The light and dark artwork are separate files, so the svg needs no dark-mode adjustment.
         const int pixels = 128;
-        return DrawingUtilities.BitmapFromSvg(svg, pixels, pixels, darkMode);
+        return DrawingUtilities.BitmapFromSvg(svg, pixels, pixels);
     }
 }
