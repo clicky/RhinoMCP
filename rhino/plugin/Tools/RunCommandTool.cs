@@ -11,6 +11,8 @@ internal static class RunCommandTool
         RhinoDoc doc,
         [Description("Rhino command string to execute")] string command)
     {
+        // TODO : RhinoApp.CommandWindowCaptureEnabled is not document specific
+        
         RhinoApp.CommandWindowCaptureEnabled = true;
         bool ran = RhinoApp.RunScript(doc.RuntimeSerialNumber, command, false);
         string[] lines = RhinoApp.CapturedCommandWindowStrings(true);

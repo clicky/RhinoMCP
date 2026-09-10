@@ -119,18 +119,21 @@ internal static class SetSelectionTool
 
     private static bool TryParseObjectType(string s, out ObjectType objectType)
     {
-        switch (s.ToLowerInvariant())
+        objectType = s.ToLowerInvariant() switch
         {
-            case "point": objectType = ObjectType.Point; return true;
-            case "pointset": objectType = ObjectType.PointSet; return true;
-            case "curve": objectType = ObjectType.Curve; return true;
-            case "surface": objectType = ObjectType.Surface; return true;
-            case "brep": objectType = ObjectType.Brep; return true;
-            case "mesh": objectType = ObjectType.Mesh; return true;
-            case "annotation": objectType = ObjectType.Annotation; return true;
-            case "light": objectType = ObjectType.Light; return true;
-            case "block": objectType = ObjectType.InstanceReference; return true;
-            default: objectType = ObjectType.None; return false;
-        }
+            "point" => ObjectType.Point,
+            "pointset" => ObjectType.PointSet,
+            "curve" => ObjectType.Curve,
+            "surface" => ObjectType.Surface,
+            "brep" => ObjectType.Brep,
+            "mesh" => ObjectType.Mesh,
+            "annotation" => ObjectType.Annotation,
+            "light" => ObjectType.Light,
+            "block" => ObjectType.InstanceReference,
+
+            _ => ObjectType.None,
+        };
+
+        return objectType is not ObjectType.None;
     }
 }

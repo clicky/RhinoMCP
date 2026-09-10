@@ -3,9 +3,6 @@ using Eto.Forms;
 
 namespace Rhino.AI;
 
-// Standalone modal host for the shared AISettingsPanel, opened from the AIPanel gear button and the
-// AISettings command. The same panel is also hosted by AIOptionsPage in the Rhino Options dialog;
-// all commit/validation logic lives in the panel so the two hosts can't drift.
 internal sealed class AISettingsDialog : Dialog
 {
     private AISettingsPanel Panel { get; } = new();
