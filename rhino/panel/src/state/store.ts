@@ -52,6 +52,8 @@ export interface Notice {
   id: string;
   level: NoticeLevel;
   text: string;
+  /** Bumped when the same notice fires again, which restarts its on-screen lifetime. */
+  repeats: Signal<number>;
 }
 
 function blockFrom(snapshot: BlockSnapshot): BlockView {
@@ -231,8 +233,19 @@ export class Store {
         this.questions.set((list) => list.filter((q) => q.id !== event.id));
         return;
 
+      // The same remark twice is still one remark: a repeat bumps the toast already showing.
       case 'notice': {
-        const notice: Notice = { id: `notice-${++noticeSeq}`, level: event.level, text: event.text };
+        const showing = this.notices().find((n) => n.level === event.level && n.text === event.text);
+        if (showing) {
+          showing.repeats.set((count) => count + 1);
+          return;
+        }
+        const notice: Notice = {
+          id: `notice-${++noticeSeq}`,
+          level: event.level,
+          text: event.text,
+          repeats: signal(0),
+        };
         this.notices.set((list) => [...list, notice]);
         return;
       }

@@ -515,6 +515,20 @@ try {
   const cleared = await until(page, `document.querySelectorAll('.notice').length === 0 ? { gone: true } : null`, 7000);
   check('a notice clears itself without being dismissed', cleared !== null);
 
+  const settings = () => page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][2].click());
+  await settings();
+  await wait(1200);
+  await settings();
+  await wait(1200);
+  await settings();
+  const repeated = await page.evaluate(() => document.querySelectorAll('.notice').length);
+  check('the same notice fired three times stays one toast', repeated === 1, `count ${repeated}`);
+  // Past the point the first firing alone would have expired, so this only holds if a repeat restarts the clock.
+  await wait(2000);
+  const alive = await page.evaluate(() => document.querySelectorAll('.notice').length);
+  check('a repeat restarts the countdown', alive === 1, `count ${alive}`);
+  await until(page, `document.querySelectorAll('.notice').length === 0 ? { gone: true } : null`, 7000);
+
   await type('Build a parametric facade in Grasshopper');
   await page.keyboard.press('Enter');
   const strip = await until(
@@ -613,7 +627,11 @@ try {
     check('the host build ships no mock host',
       (await host.evaluate(() => document.querySelectorAll('.devbar').length)) === 0);
 
-    await host.evaluate((batch) => { for (const event of batch) window.rhinoAI.receive(event); }, events);
+    // Staged: the first batch leaves the turn mid-flight, so a running tool still spins and offers its chip.
+    const settling = (event) =>
+      event.type === 'turn.end' || (event.type === 'turn.tool.patch' && event.patch.status === 'unknown');
+    await host.evaluate((batch) => { for (const event of batch) window.rhinoAI.receive(event); },
+      events.filter((event) => !settling(event)));
     await wait(600);
 
     const rendered = await host.evaluate(() => ({
@@ -624,7 +642,7 @@ try {
       bold: document.querySelectorAll('.msg-agent strong').length,
       code: document.querySelectorAll('.md-code').length,
       tools: document.querySelectorAll('.tool').length,
-      toolOk: document.querySelectorAll('.tool.ok, .tool:not(.running):not(.failed)').length,
+      toolOk: document.querySelectorAll('.tool.ok').length,
       toolFailed: document.querySelectorAll('.tool.failed').length,
       titles: [...document.querySelectorAll('.tool .title')].map((n) => n.textContent),
       wires: [...document.querySelectorAll('.tool .wire')].map((n) => n.textContent),
@@ -662,6 +680,28 @@ try {
       (await host.evaluate(() => document.querySelectorAll('.header .usage').length)) === 0);
     check('no cost is shown anywhere',
       (await host.evaluate(() => !document.body.textContent.includes('$0.'))) === true);
+
+    await host.evaluate((batch) => { for (const event of batch) window.rhinoAI.receive(event); },
+      events.filter(settling));
+    const ended = await host.evaluate(() => ({
+      spinners: document.querySelectorAll('.tool .spinner').length,
+      running: document.querySelectorAll('.tool.running').length,
+      chips: document.querySelectorAll('.tool-chip').length,
+      unknown: document.querySelectorAll('.tool.unknown').length,
+      ok: document.querySelectorAll('.tool.ok').length,
+      failed: document.querySelectorAll('.tool.failed').length,
+      dashed: getComputedStyle(document.querySelector('.tool.unknown')).borderStyle,
+    }));
+    check('a call the turn ended without a result stops, without a chip and without claiming success',
+      ended.spinners === 0 && ended.running === 0 && ended.chips === 0
+      && ended.unknown === 2 && ended.ok === 1 && ended.failed === 1 && ended.dashed === 'dashed',
+      JSON.stringify(ended));
+
+    // Dispatched rather than clicked: the fixture's questions leave a modal overlay over the transcript.
+    await host.evaluate(() => document.querySelector('.tool.unknown .tool-toggle').click());
+    await wait(150);
+    const note = await host.evaluate(() => document.querySelector('.tool.unknown .tool-note')?.textContent ?? '');
+    check('an unknown call says as much when opened', note.includes('may or may not have run'), note);
 
     // Switching Rhino's theme sends a second theme event. The panel has to restyle from it, both
     // the host-supplied tokens and the scheme attribute that drives everything the host does not

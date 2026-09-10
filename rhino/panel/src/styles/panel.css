@@ -513,6 +513,7 @@ a:hover { text-decoration: underline; }
 }
 .tool.running { border-color: var(--accent-line); }
 .tool.failed { border-color: var(--err-line); }
+.tool.unknown { border-style: dashed; }
 
 .tool-head {
   display: flex;
@@ -619,6 +620,13 @@ a:hover { text-decoration: underline; }
   color: var(--err);
   background: var(--err-soft);
   border: 1px solid var(--err-line);
+  border-radius: var(--r-sm);
+  padding: 5px 7px;
+}
+.tool-note {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  border: 1px dashed var(--border);
   border-radius: var(--r-sm);
   padding: 5px 7px;
 }

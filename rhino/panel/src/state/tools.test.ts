@@ -42,4 +42,5 @@ test('status labels', () => {
   assert.equal(statusLabel('ok'), 'done');
   assert.equal(statusLabel('failed'), 'failed');
   assert.equal(statusLabel('denied'), 'denied');
+  assert.equal(statusLabel('unknown'), 'no result');
 });

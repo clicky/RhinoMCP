@@ -15,6 +15,7 @@ internal enum TurnEventKind
 // Args and (once the matching tool_result arrives) its output in Result so a chip can expand both.
 // Id is the tool call id on a ToolUse event so its later result can be matched back to it; empty
 // for every other kind.
+// Done is the terminal update arriving, not the tool having produced output: some succeed silently.
 internal sealed record TurnEvent(
     TurnEventKind Kind,
     string Text,
@@ -22,7 +23,8 @@ internal sealed record TurnEvent(
     string Args = "",
     string Result = "",
     string Id = "",
-    bool Failed = false);
+    bool Failed = false,
+    bool Done = false);
 
 // Mutated only while it is the current turn; Complete() freezes it permanently.
 internal sealed class Turn
@@ -68,7 +70,7 @@ internal sealed class Turn
                 TurnEvent ev = EventList[i];
                 if (ev.Kind == TurnEventKind.ToolUse && ev.Id == id)
                 {
-                    EventList[i] = ev with { Result = result, Failed = failed };
+                    EventList[i] = ev with { Result = result, Failed = failed, Done = true };
                     return;
                 }
             }
@@ -121,7 +123,9 @@ internal sealed class Conversation
         {
             Turn turn = new(turnDto.Prompt, convo.Sync);
             foreach (TurnEventDto ev in turnDto.Events)
-                turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed));
+                // Transcripts saved before Done existed carry it as false, so fall back to the old inference.
+                turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
+                    ev.Done || !string.IsNullOrWhiteSpace(ev.Result)));
             turn.SetUsage(turnDto.Usage);
             turn.Complete();
             convo.TurnList.Add(turn);

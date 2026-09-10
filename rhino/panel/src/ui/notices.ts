@@ -12,8 +12,11 @@ export function notices(ctx: PanelContext): Child {
   const LIFETIME = { info: 4000, warn: 5500, error: 9000 } as const;
 
   const row = (notice: Notice): Child => {
-    const timer = setTimeout(() => ctx.store.dismissNotice(notice.id), LIFETIME[notice.level]);
-    bind(() => () => clearTimeout(timer));
+    bind(() => {
+      notice.repeats();
+      const timer = setTimeout(() => ctx.store.dismissNotice(notice.id), LIFETIME[notice.level]);
+      return () => clearTimeout(timer);
+    });
     return el(
       'div',
       { class: `notice ${notice.level}`, role: notice.level === 'error' ? 'alert' : 'status' },

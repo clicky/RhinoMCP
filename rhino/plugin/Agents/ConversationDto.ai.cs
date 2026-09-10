@@ -11,7 +11,8 @@ internal sealed record TurnEventDto(
     string Args,
     string Result,
     string Id = "",
-    bool Failed = false);
+    bool Failed = false,
+    bool Done = false);
 
 internal sealed record TurnDto(
     string Prompt,

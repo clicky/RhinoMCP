@@ -79,5 +79,7 @@ export function statusLabel(status: ToolStatus): string {
       return 'failed';
     case 'denied':
       return 'denied';
+    case 'unknown':
+      return 'no result';
   }
 }

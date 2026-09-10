@@ -25,7 +25,7 @@ internal sealed class RhinoAcpClient : IAcpClient
             case ToolCallSessionUpdate call:
                 Conversation.Record(TurnEventKind.ToolUse, call.Title, args: Raw(call.RawInput), id: call.ToolCallId);
                 break;
-            case ToolCallUpdateSessionUpdate update when update.Status is (ToolCallStatus.Completed or ToolCallStatus.Failed) && update.RawOutput is not null:
+            case ToolCallUpdateSessionUpdate update when update.Status is (ToolCallStatus.Completed or ToolCallStatus.Failed):
                 Conversation.CompleteToolCall(update.ToolCallId, Raw(update.RawOutput), update.Status == ToolCallStatus.Failed);
                 break;
         }

@@ -12,6 +12,7 @@ import { preview } from './previews.js';
 export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
   const id = call.peek().id;
   const mark = iconForTool(call.peek().name);
+  const running = () => call().status === 'running';
 
   // A failure is the one thing worth opening unasked, and only the first time.
   let autoOpened = false;
@@ -27,7 +28,7 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
   // A reviewed transcript's calls have all finished, so its chips could only fire at whatever is running now.
   const chips = () => {
     const offered = call().chips;
-    if (!offered || offered.length === 0 || ctx.store.readOnly()) return null;
+    if (!offered || offered.length === 0 || !running() || ctx.store.readOnly()) return null;
     return el(
       'div',
       { class: 'tool-chips' },
@@ -85,7 +86,7 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
           onClick: () => ctx.ui.toggleTool(id),
         },
         () =>
-          call().status === 'running'
+          running()
             ? el('span', { class: 'spinner' })
             : el('span', { class: 'fam' }, icon(mark, 14)),
         el('span', { class: 'title', text: () => call().title }),
@@ -117,6 +118,9 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
         current.preview ? preview(ctx, current.preview) : null,
         current.error
           ? el('div', { class: 'tool-error' }, icon('alert', 13), el('span', { text: current.error }))
+          : null,
+        current.status === 'unknown'
+          ? el('div', { class: 'tool-note', text: 'No result reported, so this may or may not have run.' })
           : null,
         args ? json('arguments', args) : null,
         result && !current.preview ? json('result', result) : null,

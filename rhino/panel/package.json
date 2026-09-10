@@ -8,7 +8,7 @@
     "build": "node build.mjs",
     "dev": "node build.mjs --serve",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
+    "test": "node --test --experimental-strip-types --import ./tools/tsImports.mjs \"src/**/*.test.ts\"",
     "verify": "node tools/verify.mjs",
     "verify:shots": "node tools/verify.mjs --shots"
   },

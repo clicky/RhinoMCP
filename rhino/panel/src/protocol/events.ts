@@ -54,7 +54,8 @@ export interface ContextItem {
   count?: number;
 }
 
-export type ToolStatus = 'running' | 'ok' | 'failed' | 'denied';
+/** `unknown`: the turn ended without the call ever reporting, so it may or may not have run. */
+export type ToolStatus = 'running' | 'ok' | 'failed' | 'denied' | 'unknown';
 
 /** A payload the panel renders as something better than JSON. */
 export type ToolPreview =

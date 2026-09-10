@@ -220,7 +220,7 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         if (!TryStr(item, "id", out string toolCallId))
             return ParsedLine.None;
 
-        // A failure carries `error` where a success carries `result`, and the chip only renders with non-null output.
+        // A failure carries `error` where a success carries `result`.
         bool failed = Str(item, "status") != "completed";
         JsonElement? output = item.TryGetProperty(failed ? "error" : "result", out JsonElement payload) && payload.ValueKind != JsonValueKind.Null
             ? payload.Clone()

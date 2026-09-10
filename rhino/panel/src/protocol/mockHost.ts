@@ -777,6 +777,7 @@ export class MockHost implements Bridge {
   readonly kind = 'mock' as const;
 
   private readonly handlers = new Set<(event: HostEvent) => void>();
+  private readonly inFlight = new Set<string>();
   private script: Script | null = null;
   private activeTurn: string | null = null;
   private booted = false;
@@ -802,6 +803,7 @@ export class MockHost implements Bridge {
         if (this.script && this.activeTurn) {
           this.script.cancel();
           this.emit({ type: 'status', text: null });
+          this.settleInFlight(this.activeTurn);
           this.emit({ type: 'turn.end', turnId: this.activeTurn, status: 'cancelled' });
           this.script = null;
           this.activeTurn = null;
@@ -939,7 +941,9 @@ export class MockHost implements Bridge {
       startedAt: new Date().toISOString(),
     };
     this.emit({ type: 'turn.tool', turnId, call });
+    this.inFlight.add(call.id);
     await script.pause(workMs);
+    this.inFlight.delete(call.id);
     this.emit({
       type: 'turn.tool.patch',
       turnId,
@@ -963,13 +967,22 @@ export class MockHost implements Bridge {
       turnId,
       call: { id, name, title, args, status: 'running', startedAt: new Date().toISOString() },
     });
+    this.inFlight.add(id);
     await script.pause(workMs);
+    this.inFlight.delete(id);
     this.emit({
       type: 'turn.tool.patch',
       turnId,
       callId: id,
       patch: { status: 'failed', title, durationMs: workMs, error },
     });
+  }
+
+  // Mirrors the plug-in: a turn cut short reports its in-flight calls as unknown, never as done.
+  private settleInFlight(turnId: string): void {
+    for (const callId of this.inFlight)
+      this.emit({ type: 'turn.tool.patch', turnId, callId, patch: { status: 'unknown', chips: [] } });
+    this.inFlight.clear();
   }
 
   private boot(): void {
@@ -1004,6 +1017,7 @@ export class MockHost implements Bridge {
 
     const turnId = nextId('turn');
     this.activeTurn = turnId;
+    this.inFlight.clear();
 
     this.emit({
       type: 'turn.begin',
@@ -1026,6 +1040,7 @@ export class MockHost implements Bridge {
       await scenario.run(this, turnId, script, prompt);
     } catch (error) {
       if (error !== ABORTED) {
+        this.settleInFlight(turnId);
         this.emit({ type: 'turn.end', turnId, status: 'error', error: String(error) });
         this.status(null);
       }

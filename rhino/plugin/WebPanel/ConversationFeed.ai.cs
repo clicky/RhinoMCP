@@ -29,6 +29,8 @@ internal sealed class ConversationFeed
 
     private readonly record struct PosedQuestion(PendingQuestion Question, string Id);
 
+    private readonly record struct ToolOutcome(string Result, bool Done);
+
     private sealed class TurnCursor
     {
         public string Id = string.Empty;
@@ -36,7 +38,7 @@ internal sealed class ConversationFeed
         // Consecutive assistant chunks are one block; a tool call or a result closes it.
         public string? OpenTextBlock;
         public int TextBlocks;
-        public Dictionary<string, string> ToolResults = new();
+        public Dictionary<string, ToolOutcome> ToolOutcomes = new();
         public bool UsageSent;
         public bool Ended;
     }
@@ -119,9 +121,10 @@ internal sealed class ConversationFeed
             if (ev.Kind != TurnEventKind.ToolUse)
                 continue;
             string callId = CallId(cursor, i, ev);
-            if (!cursor.ToolResults.TryGetValue(callId, out string? sent) || sent == ev.Result)
+            ToolOutcome landed = new(ev.Result, ev.Done);
+            if (!cursor.ToolOutcomes.TryGetValue(callId, out ToolOutcome sent) || sent == landed)
                 continue;
-            cursor.ToolResults[callId] = ev.Result;
+            cursor.ToolOutcomes[callId] = landed;
             Emit(new TurnToolPatchEvent(cursor.Id, callId, PatchFor(ev)));
         }
 
@@ -139,7 +142,7 @@ internal sealed class ConversationFeed
                 {
                     cursor.OpenTextBlock = null;
                     string callId = CallId(cursor, cursor.EventsSent, ev);
-                    cursor.ToolResults[callId] = ev.Result;
+                    cursor.ToolOutcomes[callId] = new ToolOutcome(ev.Result, ev.Done);
                     Emit(new TurnToolEvent(cursor.Id, CallFor(callId, ev)));
                     break;
                 }
@@ -164,6 +167,10 @@ internal sealed class ConversationFeed
         if (!cursor.Ended && turn.Completed)
         {
             cursor.Ended = true;
+            // The turn is over, so a call still waiting on its terminal update never will get one.
+            for (int i = 0; i < events.Count; i++)
+                if (events[i].Kind == TurnEventKind.ToolUse && !events[i].Done)
+                    Emit(new TurnToolPatchEvent(cursor.Id, CallId(cursor, i, events[i]), UnknownPatch));
             Emit(new TurnEndEvent(cursor.Id, "ok", null));
         }
     }
@@ -247,8 +254,8 @@ internal sealed class ConversationFeed
     public bool IsCallRunning(string callId)
     {
         foreach (TurnCursor cursor in Cursors)
-            if (cursor.ToolResults.TryGetValue(callId, out string? result))
-                return string.IsNullOrWhiteSpace(result);
+            if (cursor.ToolOutcomes.TryGetValue(callId, out ToolOutcome outcome))
+                return !cursor.Ended && !outcome.Done;
         return false;
     }
 
@@ -259,7 +266,7 @@ internal sealed class ConversationFeed
 
     private static PanelToolCall CallFor(string callId, TurnEvent ev)
     {
-        bool finished = !string.IsNullOrWhiteSpace(ev.Result);
+        bool finished = ev.Done;
         bool failed = finished && (ev.Failed || ToolSummary.IsFailure(ev.Result));
         string name = ToolSummary.RemoveUnderscoreUnderscoreNaming(ev.Text);
         return new PanelToolCall(
@@ -276,7 +283,9 @@ internal sealed class ConversationFeed
             ToolChips.For(name, !finished));
     }
 
-    // Only ever emitted once a result lands, so the call has finished and any chip it offered is spent.
+    private static PanelToolPatch UnknownPatch { get; } = new("unknown", null, null, null, null, ToolChips.None);
+
+    // Only ever emitted once the terminal update lands, so the call has finished and any chip it offered is spent.
     private static PanelToolPatch PatchFor(TurnEvent ev)
     {
         bool failed = ev.Failed || ToolSummary.IsFailure(ev.Result);

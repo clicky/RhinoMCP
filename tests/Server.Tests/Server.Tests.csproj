@@ -43,6 +43,17 @@
     <Using Include="Rhino.AI.Server" />
   </ItemGroup>
 
+  <!-- The panel feed and the transcript graph it flattens: no Rhino, so they test here. -->
+  <ItemGroup>
+    <Compile Include="../../rhino/plugin/Agents/Conversation.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/Agents/ConversationDto.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelEvents.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/ToolChips.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.ai.cs" LinkBase="PanelSources" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="../../rhino/plugin/McpConfigEdit.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/ScriptProjects/PluginNaming.cs" LinkBase="PluginSources" />

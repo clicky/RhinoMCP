@@ -24,8 +24,7 @@ internal static class ToolSummary
     public static string Describe(string rawToolName, string argsJson, string resultJson, bool reportedFailure = false)
     {
         string toolName = RemoveUnderscoreUnderscoreNaming(rawToolName);
-        bool hasResult = !string.IsNullOrWhiteSpace(resultJson);
-        bool failed = hasResult && (reportedFailure || IsFailure(resultJson));
+        bool failed = reportedFailure || (!string.IsNullOrWhiteSpace(resultJson) && IsFailure(resultJson));
 
         string phrase = Phrase(toolName, argsJson, resultJson, failed);
         return phrase;
