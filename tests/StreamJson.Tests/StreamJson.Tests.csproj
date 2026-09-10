@@ -30,42 +30,42 @@
     the code under test runs unchanged.
   -->
   <ItemGroup>
-    <Compile Include="../../rhino/plugin/Server/Protocol.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Server/BindNotes.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Server/Protocol.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Server/BindNotes.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/AgentAdapter.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/AgentDefinition.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/Registry/AgentRegistry.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentDefinition.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Registry/AgentRegistry.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/Registry/IAgentFinder.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/Registry/ClaudeFinder.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/Registry/CodexFinder.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/Registry/GeminiFinder.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/AgentPrompts.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/Attachment.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentPrompts.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Attachment.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/UserMessage.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/AcpMessageMapper.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/CliProcess.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/CliLogin.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/IStreamJsonParser.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/ParsedLine.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/TokenUsage.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/ClaudeStreamJsonParser.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/CodexStreamJsonParser.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/StreamJsonAgent.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AcpMessageMapper.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/CliProcess.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/CliLogin.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/IStreamJsonParser.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ParsedLine.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ClaudeStreamJsonParser.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/CodexStreamJsonParser.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/StreamJsonAgent.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/IAgentRunner.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/AgentRunner.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/RhinoAcpClient.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/Conversation.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentRunner.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/RhinoAcpClient.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Conversation.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Agents/ConversationStore.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/Tools/QuestionReply.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelEvents.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelCommands.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelJson.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelTheme.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/ToolChips.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ConversationStore.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Tools/QuestionReply.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/UI/ToolSummary.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelEvents.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelCommands.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelJson.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelTheme.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/ToolChips.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.ai.cs" LinkBase="PluginSources" />
   </ItemGroup>
 
 </Project>
