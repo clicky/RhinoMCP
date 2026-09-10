@@ -8,10 +8,8 @@ internal sealed record ScriptProjectPaths(string PluginName, string Directory, s
     {
         string pluginName = PluginNameResolver.Resolve(requestedPluginName);
 
-        string root = RhinoApp.GetDataDirectory(
-            localUser: true,
-            forceDirectoryCreation: false,
-            subDirectory: Path.Combine("RhinoAI", "Projects", pluginName));
+        string versionFolder = Rhino.ApplicationSettings.FileSettings.GetDataFolder(true);
+        string root = Path.Combine(versionFolder, "RhinoAI", "Projects", pluginName);
 
         return new ScriptProjectPaths(
             pluginName,

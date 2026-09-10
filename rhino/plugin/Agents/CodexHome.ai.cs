@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.Reflection;
 
 namespace Rhino.AI;
 
@@ -16,17 +14,15 @@ internal static class CodexHome
         if (Prepared is string ready)
             return ready;
 
-        string home = RhinoApp.GetDataDirectory(
-            localUser: true,
-            forceDirectoryCreation: true,
-            subDirectory: Path.Combine("RhinoAI", "CodexHome"));
+        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        string codexDataStash = Path.Combine(appData, "RhinoAI", "Codex");
 
-        Directory.CreateDirectory(home);
-        File.WriteAllText(Path.Combine(home, "config.toml"), ShippedConfig());
-        LinkAuth(home);
+        Directory.CreateDirectory(codexDataStash);
+        File.WriteAllText(Path.Combine(codexDataStash, "config.toml"), ShippedConfig());
+        LinkAuth(codexDataStash);
 
-        Prepared = home;
-        return home;
+        Prepared = codexDataStash;
+        return codexDataStash;
     }
 
     private static string ShippedConfig()
