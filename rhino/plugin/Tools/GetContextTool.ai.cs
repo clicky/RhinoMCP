@@ -5,9 +5,7 @@ using Rhino.Geometry;
 using Grasshopper;
 using Grasshopper.Kernel;
 
-#if R9
 using Rhino.AI.Resources;
-#endif
 
 namespace Rhino.AI.Tools;
 
@@ -147,11 +145,11 @@ internal static partial class GetContextTool
             if (obj is IGH_Component comp)
             {
                 foreach (IGH_Param input in comp.Params.Input)
-                    wires += input.Sources.Count;
+                    wires += GH1_Utils.WireSources(ghDoc, input).Count();
             }
             else if (obj is IGH_Param param)
             {
-                wires += param.Sources.Count;
+                wires += GH1_Utils.WireSources(ghDoc, param).Count();
             }
         }
 
