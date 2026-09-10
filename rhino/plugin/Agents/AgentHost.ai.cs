@@ -49,7 +49,7 @@ internal static class AgentHost
             AgentRegistry.Instance.TryGet(active, out def))
             return true;
 
-        string defaultAgentName = "Claude"; // AISettings.DefaultAgentName;
+        string defaultAgentName = AISettings.DefaultAgentName;
 
         return AgentRegistry.Instance.TryGet(defaultAgentName, out def);
     }
@@ -98,13 +98,13 @@ internal static class AgentHost
     {
         Conversation restored = Conversation.Restore(dto);
         Guid resumeId = restored.AgentSessionId;
-        switch (def.Name)
+        switch (def.Name.ToLowerInvariant())
         {
-            case "Claude":
+            case "claude":
                 return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new ClaudeStreamJsonParser(def), resumeId));
-            case "Codex":
+            case "codex":
                 return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def, CodexHome.Prepare()), resumeId));
-            case "Gemini":
+            case "gemini":
                 
                 // No native --resume seam: the prior turns are shown for the user's reference, but the
                 // fresh native session starts with no memory of them. Warn so the user doesn't assume

@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Rhino.AI.Paths;
 
-internal record struct Glob(string GlobPath)
+internal record struct Glob(string GlobPath, bool IncludeDirs = true)
 {
 
     private List<string>? PrivateTruePaths { get; set; }
@@ -16,9 +16,9 @@ internal record struct Glob(string GlobPath)
         if (string.IsNullOrEmpty(GlobPath)) return [];
 
         string globPath = GlobPath.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-        string[] parts = globPath.Split(Path.DirectorySeparatorChar);
+        string[] parts = globPath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
 
-        List<string> paths = OperatingSystem.IsWindows() ? [""] : ["/"];
+        List<string> paths = OperatingSystem.IsWindows() ? [""] : [Path.DirectorySeparatorChar.ToString()];
         for (int i = 0; i < parts.Length; i++)
         {
             string nextPart = parts[i];
@@ -31,12 +31,18 @@ internal record struct Glob(string GlobPath)
             }
 
             // Nothing found, it's a dead end
-            if (tempPaths.Count == 0) break;
+            if (tempPaths.Count == 0) return [];
+
             paths = tempPaths;
         }
 
-        // Descending ensures that any versioned folders appear at the top
-        return paths.OrderDescending().ToList();
+        if (!IncludeDirs)
+        {
+            paths = paths.Where(p => File.Exists(p)).ToList();
+        }
+
+        // Most recently written first
+        return paths.OrderByDescending(File.GetLastWriteTimeUtc).ToList();
     }
 
     private static List<string> ResolveGlobPath(string fullPath, string nextPart)

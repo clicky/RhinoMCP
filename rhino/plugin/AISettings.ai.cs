@@ -52,34 +52,6 @@ internal static class AISettings
             ? child
             : Settings.AddChild(nameof(Conversations));
 
-    // The full agent chain: built-ins (always present, Claude-first) overlaid with any custom
-    // entries, in chain order. Custom entries that alias a built-in name override the built-in
-    // in place; never duplicated. Built-ins are re-seeded on every read so they can't be lost.
-    public static IReadOnlyList<AgentDefinition> GetAgents()
-        => AgentRegistry.Instance.AllDefinitions;
-
-    // Persists the chain. Built-ins are not stored verbatim (they re-seed on read); we store
-    // every entry's settable state so a built-in override (e.g. edited search paths) survives.
-    public static void SetAgents(IReadOnlyList<AgentDefinition> agents) =>
-        Settings.SetString(AgentsKey, JsonSerializer.Serialize(agents, McpSerializer.Options));
-
-    private const string AgentsKey = "Agents";
-
-    private static IReadOnlyList<AgentDefinition> DeserializeAgents()
-    {
-        string json = Settings.GetString(AgentsKey, string.Empty);
-        if (string.IsNullOrWhiteSpace(json))
-            return [];
-        try
-        {
-            AgentDefinition[]? parsed = JsonSerializer.Deserialize<AgentDefinition[]>(json, McpSerializer.Options);
-            return parsed ?? [];
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
     public static int StartingPort
     {
         get => Settings.GetInteger(nameof(StartingPort), 10500);

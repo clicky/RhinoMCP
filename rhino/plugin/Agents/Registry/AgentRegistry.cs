@@ -51,13 +51,10 @@ internal class AgentRegistry
                 BuiltInDefinitions.AddRange(definitions. Definitions);
             }
         }
-        catch (Exception ex)
+        catch
         {
-            ;
+            // TODO : Log
         }
-
-        // TODO : Grab from Settings
-        // AISettings.
     }
 
     private static void LoadDefinitionsFromRemote()

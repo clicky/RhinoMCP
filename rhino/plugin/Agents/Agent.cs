@@ -19,11 +19,11 @@ internal sealed record AgentDefinition(string Name, SearchPaths SearchPaths, IRe
         LoggedIn = true;
     }
 
-    public IAgentRunner GetRunner(string docTitle) => Name switch
+    public IAgentRunner GetRunner(string docTitle) => Name.ToLowerInvariant() switch
     {
-        "Claude" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new ClaudeStreamJsonParser(this))),
-        "Codex" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new CodexStreamJsonParser(this, CodexHome.Prepare()))),
-        "Gemini" => new AgentRunner(this, docTitle, (client, _, cwd) => GeminiConnection.Connect(this, client, cwd)),
+        "claude" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new ClaudeStreamJsonParser(this))),
+        "codex" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new CodexStreamJsonParser(this, CodexHome.Prepare()))),
+        "gemini" => new AgentRunner(this, docTitle, (client, _, cwd) => GeminiConnection.Connect(this, client, cwd)),
 
         // TODO : Use a better result
         _ => throw new NotImplementedException($"{Name} is not configured")
@@ -67,7 +67,7 @@ internal sealed record SearchPaths()
                     .Replace("%USERPROFILE%", USER_PROFILE);
             }
 
-            Paths = paths.SelectMany(p => new Paths.Glob(p).TruePaths).ToList();
+            Paths = paths.SelectMany(p => new Paths.Glob(p, false).TruePaths).ToList();
         }
 
         return Paths;
