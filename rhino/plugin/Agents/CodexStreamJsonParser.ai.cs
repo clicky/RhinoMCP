@@ -79,12 +79,12 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         }
 
         psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(Definition.DefaultPrompt))}");
+        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)))}");
 
-        if (Definition.DefaultModel.Length > 0)
+        if (AISettings.EffectiveModel(Definition) is { Length: > 0 } model)
         {
             psi.ArgumentList.Add("-m");
-            psi.ArgumentList.Add(Definition.DefaultModel);
+            psi.ArgumentList.Add(model);
         }
         // foreach (string arg in Definition.ExtraArgs)
         //     psi.ArgumentList.Add(arg);

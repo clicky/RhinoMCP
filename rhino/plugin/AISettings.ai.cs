@@ -28,6 +28,40 @@ internal static class AISettings
         set => Settings.SetStringList(nameof(DisabledTools), value);
     }
 
+    // Definitions ship read-only in Definitions.json, so user edits are stored here and layered on at use.
+    public static string[] DisabledAgents
+    {
+        get => Settings.GetStringList(nameof(DisabledAgents), []);
+        set => Settings.SetStringList(nameof(DisabledAgents), value);
+    }
+
+    public static bool IsEnabled(AgentDefinition def) =>
+        def.Enabled && !DisabledAgents.Contains(def.Name, StringComparer.OrdinalIgnoreCase);
+
+    public static void SetAgentEnabled(string name, bool enabled)
+    {
+        string[] remaining = DisabledAgents
+            .Where(n => !string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        DisabledAgents = enabled ? remaining : [.. remaining, name];
+    }
+
+    public static string AgentModel(string name) => Settings.GetString(AgentKey(name, "Model"), string.Empty);
+
+    public static void SetAgentModel(string name, string model) => Settings.SetString(AgentKey(name, "Model"), model);
+
+    public static string AgentPrompt(string name) => Settings.GetString(AgentKey(name, "Prompt"), string.Empty);
+
+    public static void SetAgentPrompt(string name, string prompt) => Settings.SetString(AgentKey(name, "Prompt"), prompt);
+
+    public static string EffectiveModel(AgentDefinition def) =>
+        AgentModel(def.Name) is { Length: > 0 } model ? model : def.DefaultModel;
+
+    public static string EffectivePrompt(AgentDefinition def) =>
+        AgentPrompt(def.Name) is { Length: > 0 } prompt ? prompt : def.DefaultPrompt;
+
+    private static string AgentKey(string name, string field) => $"Agent_{name.ToLowerInvariant()}_{field}";
+
     // Overrides the username-derived name of the plugin manage_plugin_commands writes to.
     public static string? ScriptPluginName
     {

@@ -348,7 +348,7 @@ public class AIPanel : Panel
     // Matches the agent picker's drivability check: a registered but disabled or missing agent has
     // no launchable runner, so the panel must offer review without a Resume.
     private static bool Resumable(string agentName) =>
-        AgentRegistry.Instance.AllDefinitions.Any(r => r.Name == agentName && r is { Enabled: true, Available: true });
+        AgentRegistry.Instance.AllDefinitions.Any(r => r.Name == agentName && r.Available && AISettings.IsEnabled(r));
 
     // Read-only: the saved transcript is restored into a detached Conversation and replayed through
     // the same feed the live path uses, so there is no second rendering path to keep in step.
@@ -423,7 +423,8 @@ public class AIPanel : Panel
     {
         if (!TryDoc(out RhinoDoc doc))
             return;
-        if (AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Name == name) is not { Enabled: true, Available: true })
+        if (AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Name == name) is not { Available: true } picked
+            || !AISettings.IsEnabled(picked))
             return;
 
         LastAgentKey = name;
@@ -584,9 +585,9 @@ public class AIPanel : Panel
         List<PanelAgent> agents = new();
         foreach (AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
         {
-            bool enabled = definition.Enabled;
+            bool enabled = AISettings.IsEnabled(definition);
             string availability = !enabled ? "disabled" : !definition.Available ? "missing" : "ready";
-            string model = definition.DefaultModel.Length > 0 ? definition.DefaultModel : "default";
+            string model = AISettings.EffectiveModel(definition) is { Length: > 0 } chosen ? chosen : "default";
             agents.Add(new PanelAgent(
                 definition.Name,
                 PrettyName.Of(definition.Name),
@@ -605,7 +606,7 @@ public class AIPanel : Panel
         if (TryDoc(out RhinoDoc doc) && AgentHost.TryFor(doc, out IAgentRunner agent))
             active = agent.Name;
         else
-            active = AgentRegistry.Instance.AllDefinitions.FirstOrDefault(static r => r.Enabled && r.Available)?.Name;
+            active = AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Available && AISettings.IsEnabled(r))?.Name;
 
         if (active is { Length: > 0 })
             LastAgentKey = active;

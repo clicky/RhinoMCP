@@ -12,7 +12,7 @@ internal static class AIAutoLoad
         foreach(AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
         {
             if (!definition.Available) continue;
-            if (!definition.Enabled) continue;
+            if (!AISettings.IsEnabled(definition)) continue;
             return true;
         }
         

@@ -100,15 +100,15 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         psi.ArgumentList.Add("--allowedTools");
         psi.ArgumentList.Add(allowedTools);
         psi.ArgumentList.Add("--append-system-prompt");
-        psi.ArgumentList.Add(AgentPrompts.Compose(Definition.DefaultPrompt));
+        psi.ArgumentList.Add(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)));
         psi.ArgumentList.Add("--disable-slash-commands");
         psi.ArgumentList.Add(resume ? "--resume" : "--session-id");
         psi.ArgumentList.Add(agentSessionId);
 
-        if (Definition.DefaultModel.Length > 0)
+        if (AISettings.EffectiveModel(Definition) is { Length: > 0 } model)
         {
             psi.ArgumentList.Add("--model");
-            psi.ArgumentList.Add(Definition.DefaultModel);
+            psi.ArgumentList.Add(model);
         }
         // foreach (string arg in Definition.ExtraArgs)
         //     psi.ArgumentList.Add(arg);
