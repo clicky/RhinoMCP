@@ -348,7 +348,7 @@ public class AIPanel : Panel
     // Matches the agent picker's drivability check: a registered but disabled or missing agent has
     // no launchable runner, so the panel must offer review without a Resume.
     private static bool Resumable(string agentName) =>
-        AgentRegistry.Chain.Any(r => r.Definition.Name == agentName && r is { Definition.Enabled: true, Available: true });
+        AgentRegistry.Instance.AllDefinitions.Any(r => r.Name == agentName && r is { Enabled: true, Available: true });
 
     // Read-only: the saved transcript is restored into a detached Conversation and replayed through
     // the same feed the live path uses, so there is no second rendering path to keep in step.
@@ -423,7 +423,7 @@ public class AIPanel : Panel
     {
         if (!TryDoc(out RhinoDoc doc))
             return;
-        if (AgentRegistry.Chain.FirstOrDefault(r => r.Definition.Name == name) is not { Definition.Enabled: true, Available: true })
+        if (AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Name == name) is not { Enabled: true, Available: true })
             return;
 
         LastAgentKey = name;
@@ -491,7 +491,6 @@ public class AIPanel : Panel
     {
         AISettingsDialog dialog = new();
         dialog.ShowModal(this);
-        AgentRegistry.Refresh();
         // Forced: this runs on the panel's `ready`, so the page is new and has nothing yet.
         SendTheme(force: true);
         SendAgents();
@@ -583,31 +582,30 @@ public class AIPanel : Panel
     private void SendAgents()
     {
         List<PanelAgent> agents = new();
-        foreach (ResolvedAgent resolved in AgentRegistry.Chain)
+        foreach (AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
         {
-            bool enabled = resolved.Definition.Enabled;
-            string availability = !enabled ? "disabled" : !resolved.Available ? "missing" : "ready";
-            string model = resolved.Definition.Model.Length > 0 ? resolved.Definition.Model : "default";
+            bool enabled = definition.Enabled;
+            string availability = !enabled ? "disabled" : !definition.Available ? "missing" : "ready";
+            string model = definition.DefaultModel.Length > 0 ? definition.DefaultModel : "default";
             agents.Add(new PanelAgent(
-                resolved.Definition.Name,
-                PrettyName.Of(resolved.Definition.Name),
+                definition.Name,
+                PrettyName.Of(definition.Name),
                 model,
                 PrettyName.Of(model),
                 availability,
                 availability switch
                 {
                     "disabled" => "turned off in AI settings",
-                    "missing" => $"'{resolved.Definition.Command}' was not found",
+                    "missing" => $"'{definition.Name}' was not found",
                     _ => null,
-                },
-                resolved.Definition.IsBuiltin));
+                }));
         }
 
         string? active = null;
         if (TryDoc(out RhinoDoc doc) && AgentHost.TryFor(doc, out IAgentRunner agent))
             active = agent.Name;
         else
-            active = AgentRegistry.Chain.FirstOrDefault(static r => r.Definition.Enabled && r.Available)?.Definition.Name;
+            active = AgentRegistry.Instance.AllDefinitions.FirstOrDefault(static r => r.Enabled && r.Available)?.Name;
 
         if (active is { Length: > 0 })
             LastAgentKey = active;

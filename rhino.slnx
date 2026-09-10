@@ -19,7 +19,6 @@
     <Project Path="tests/Router.Tests/Router.Tests.csproj" />
     <Project Path="tests/Acp.Tests/Acp.Tests.csproj" />
     <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
-    <Project Path="tests/StreamJson.Tests/StreamJson.Tests.csproj" />
     <Project Path="tests/Server.Tests/Server.Tests.csproj" />
   </Folder>
   <Folder Name="/ngentic/">

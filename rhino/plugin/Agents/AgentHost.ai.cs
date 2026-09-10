@@ -35,8 +35,7 @@ internal static class AgentHost
             agent = default!;
             return false;
         }
-        string docTitle = DocTitle(doc);
-        agent = For(doc, () => AgentFactory.Create(def, docTitle));
+        agent = For(doc, () => def.GetRunner(DocTitle(doc)));
         return true;
     }
 
@@ -47,10 +46,12 @@ internal static class AgentHost
     private static bool TryResolveActiveDefinition(RhinoDoc doc, out AgentDefinition def)
     {
         if (ActiveNames.TryGetValue(doc.RuntimeSerialNumber, out string? active) &&
-            AgentRegistry.TryGet(active, out def))
+            AgentRegistry.Instance.TryGet(active, out def))
             return true;
 
-        return AgentRegistry.TryResolveActive(out def);
+        string defaultAgentName = "Claude"; // AISettings.DefaultAgentName;
+
+        return AgentRegistry.Instance.TryGet(defaultAgentName, out def);
     }
 
     public static IAgentRunner For(RhinoDoc doc, Func<IAgentRunner> factory)
@@ -72,7 +73,7 @@ internal static class AgentHost
     // Returns false when the saved conversation's agent is no longer registered.
     public static bool TryResume(RhinoDoc doc, ConversationDto dto, out IAgentRunner agent)
     {
-        if (!AgentRegistry.TryGet(dto.AgentName, out AgentDefinition def))
+        if (!AgentRegistry.Instance.TryGet(dto.AgentName, out AgentDefinition def))
         {
             agent = default!;
             return false;
@@ -82,11 +83,39 @@ internal static class AgentHost
         if (Agents.Remove(key, out IAgentRunner? prior))
             SafeDispose(prior);
 
-        IAgentRunner resumed = AgentFactory.CreateResumed(def, dto);
+        IAgentRunner resumed = CreateResumed(def, dto);
         Agents[key] = resumed;
         SetActive(doc, def.Name);
         agent = resumed;
         return true;
+    }
+
+    // Resume a persisted conversation: restore its transcript and seed the stream-json CLI to launch
+    // with --resume <saved id> so the agent continues with its prior context. The runner drives the
+    // restored Conversation, so the prior turns stay visible. Gemini (native ACP) has no --resume seam
+    // here, so it falls back to a fresh native session while still showing the restored transcript.
+    public static IAgentRunner CreateResumed(AgentDefinition def, ConversationDto dto)
+    {
+        Conversation restored = Conversation.Restore(dto);
+        Guid resumeId = restored.AgentSessionId;
+        switch (def.Name)
+        {
+            case "Claude":
+                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new ClaudeStreamJsonParser(def), resumeId));
+            case "Codex":
+                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def, CodexHome.Prepare()), resumeId));
+            case "Gemini":
+                
+                // No native --resume seam: the prior turns are shown for the user's reference, but the
+                // fresh native session starts with no memory of them. Warn so the user doesn't assume
+                // continuity the agent doesn't have.
+                restored.NoteSystem("Gemini cannot resume prior context; the turns above are shown for reference only.");
+                
+                return new AgentRunner(def, restored, (client, _, cwd) => GeminiConnection.Connect(def, client, cwd));
+            
+            default:
+                throw new NotImplementedException($"Unknown agent adapter {def.Name}");
+        }
     }
 
     // The active pooled agent for the doc, so a control verb (cancel/stop) acts on the running

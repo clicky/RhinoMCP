@@ -78,6 +78,7 @@
   <ItemGroup>
     <EmbeddedResource Include="../../art/*.svg" />
     <EmbeddedResource Include="../../art/*.ico" />
+    <EmbeddedResource Include="Agents/Definitions.json" />
     <!-- The web panel, built from rhino/panel. Committed so a build needs no Node toolchain; the
          RebuildAIPanel target below refreshes it when one is present. -->
     <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="Rhino.AI.panel.html" />

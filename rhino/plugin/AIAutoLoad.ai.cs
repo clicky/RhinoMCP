@@ -9,11 +9,10 @@ internal static class AIAutoLoad
 
     public static bool ShouldAutoLoad()
     {
-        foreach(ResolvedAgent? agent in AgentRegistry.Chain)
+        foreach(AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
         {
-            if (agent is null) continue;
-            if (!agent.Available) continue;
-            if (!agent.Definition.Enabled) continue;
+            if (!definition.Available) continue;
+            if (!definition.Enabled) continue;
             return true;
         }
         

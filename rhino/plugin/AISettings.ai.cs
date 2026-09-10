@@ -55,8 +55,8 @@ internal static class AISettings
     // The full agent chain: built-ins (always present, Claude-first) overlaid with any custom
     // entries, in chain order. Custom entries that alias a built-in name override the built-in
     // in place; never duplicated. Built-ins are re-seeded on every read so they can't be lost.
-    public static IReadOnlyList<AgentDefinition> GetAgents() =>
-        AgentRegistry.Overlay(AgentRegistry.Builtins(), DeserializeAgents());
+    public static IReadOnlyList<AgentDefinition> GetAgents()
+        => AgentRegistry.Instance.AllDefinitions;
 
     // Persists the chain. Built-ins are not stored verbatim (they re-seed on read); we store
     // every entry's settable state so a built-in override (e.g. edited search paths) survives.
@@ -80,30 +80,6 @@ internal static class AISettings
             return [];
         }
     }
-
-    // Model identifiers the user has typed into the Model dropdown, remembered per adapter so they
-    // reappear as choices. Kept separate from KnownModels (the built-in seeds) and merged on read.
-    public static IReadOnlyList<string> GetCustomModels(AgentAdapter adapter) =>
-        Settings.GetStringList(CustomModelsKey(adapter), []);
-
-    // Remembers a user-typed model for its adapter. No-ops for blanks, built-in seeds, and
-    // already-remembered values so the stored list stays a clean set of genuinely custom entries.
-    public static void RememberCustomModel(AgentAdapter adapter, string model)
-    {
-        string trimmed = model.Trim();
-        if (trimmed.Length == 0 || KnownModels.For(adapter).Contains(trimmed, StringComparer.OrdinalIgnoreCase))
-            return;
-
-        string[] existing = Settings.GetStringList(CustomModelsKey(adapter), []);
-        if (existing.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
-            return;
-
-        string[] updated = [.. existing, trimmed];
-        Settings.SetStringList(CustomModelsKey(adapter), updated);
-    }
-
-    private static string CustomModelsKey(AgentAdapter adapter) => $"CustomModels_{adapter}";
-
     public static int StartingPort
     {
         get => Settings.GetInteger(nameof(StartingPort), 10500);

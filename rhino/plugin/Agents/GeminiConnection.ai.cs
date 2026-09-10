@@ -11,7 +11,7 @@ internal static class GeminiConnection
 {
     public static IAcpAgent Connect(AgentDefinition def, IAcpClient client, string cwd)
     {
-        if (!CliProcess.TryResolve(def.AgentPaths, out string path))
+        if (!CliProcess.TryResolve(def.SearchPaths.GetPaths(), out string path))
             throw new FileNotFoundException("Gemini CLI not found. Install it (npm i -g @google/gemini-cli).");
 
         ProcessStartInfo psi = new()
@@ -26,8 +26,8 @@ internal static class GeminiConnection
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
         psi.ArgumentList.Add("--experimental-acp");
-        foreach (string arg in def.ExtraArgs)
-            psi.ArgumentList.Add(arg);
+        // foreach (string arg in def.ExtraArgs)
+        //     psi.ArgumentList.Add(arg);
 
         Process proc = new() { StartInfo = psi };
         proc.ErrorDataReceived += (_, e) =>

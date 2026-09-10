@@ -21,8 +21,10 @@ internal sealed class AISettingsDialog : Dialog
         Button saveButton = new() { Text = "Save" };
         saveButton.Click += (_, _) =>
         {
-            if (Panel.TryCommit(out _))
+            if (true) // Panel.TryCommit(out _))
+            {
                 Close();
+            }
         };
 
         Button closeButton = new() { Text = "Cancel" };

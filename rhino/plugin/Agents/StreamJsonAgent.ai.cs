@@ -197,7 +197,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
 
     private async Task StartAsync()
     {
-        if (!CliProcess.TryResolve(Definition.AgentPaths, out string path))
+        if (!CliProcess.TryResolve(Definition.SearchPaths.GetPaths(), out string path))
             throw new FileNotFoundException(Parser.NotFoundMessage);
 
         // Deliberately NOT probed before the spawn. `auth status` can report loggedIn:false for a CLI

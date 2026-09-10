@@ -100,18 +100,18 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         psi.ArgumentList.Add("--allowedTools");
         psi.ArgumentList.Add(allowedTools);
         psi.ArgumentList.Add("--append-system-prompt");
-        psi.ArgumentList.Add(AgentPrompts.Compose(Definition.SystemPrompt));
+        psi.ArgumentList.Add(AgentPrompts.Compose(Definition.DefaultPrompt));
         psi.ArgumentList.Add("--disable-slash-commands");
         psi.ArgumentList.Add(resume ? "--resume" : "--session-id");
         psi.ArgumentList.Add(agentSessionId);
 
-        if (Definition.Model.Length > 0)
+        if (Definition.DefaultModel.Length > 0)
         {
             psi.ArgumentList.Add("--model");
-            psi.ArgumentList.Add(Definition.Model);
+            psi.ArgumentList.Add(Definition.DefaultModel);
         }
-        foreach (string arg in Definition.ExtraArgs)
-            psi.ArgumentList.Add(arg);
+        // foreach (string arg in Definition.ExtraArgs)
+        //     psi.ArgumentList.Add(arg);
     }
 
     // ACP content blocks -> Claude's stream-json user content (text + base64 image). Underscored
