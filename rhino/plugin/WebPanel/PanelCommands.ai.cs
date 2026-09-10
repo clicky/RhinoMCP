@@ -17,6 +17,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(ResumeConversationCommand), "conversation.resume")]
 [JsonDerivedType(typeof(ExitReviewCommand), "conversation.exitReview")]
 [JsonDerivedType(typeof(SelectAgentCommand), "agent.select")]
+[JsonDerivedType(typeof(LoginCommand), "agent.login")]
 [JsonDerivedType(typeof(AnswerQuestionCommand), "question.answer")]
 [JsonDerivedType(typeof(DismissQuestionCommand), "question.dismiss")]
 [JsonDerivedType(typeof(ToolChipCommand), "tool.chip")]
@@ -34,6 +35,7 @@ internal sealed record LoadConversationCommand(string SessionId) : PanelCommand;
 internal sealed record ResumeConversationCommand(string SessionId) : PanelCommand;
 internal sealed record ExitReviewCommand : PanelCommand;
 internal sealed record SelectAgentCommand(string Name) : PanelCommand;
+internal sealed record LoginCommand : PanelCommand;
 // One submit answers every question showing, so both carry the whole set: the panel renders the
 // outstanding questions as a single card with a single button.
 internal sealed record AnswerQuestionCommand(IReadOnlyList<QuestionAnswer> Items) : PanelCommand;

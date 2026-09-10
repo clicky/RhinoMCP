@@ -68,6 +68,35 @@ internal sealed class AgentRunner : IAgentRunner
         }
     }
 
+    public async Task LoginAsync(string mcpUrl, string cwd)
+    {
+        if (!Name.Equals("claude", StringComparison.OrdinalIgnoreCase) &&
+            !Name.Equals("codex", StringComparison.OrdinalIgnoreCase))
+        {
+            Conversation.NoteSystem($"/login is not supported for {Name}. Sign in using its CLI in a terminal.");
+            return;
+        }
+        if (!await TurnGate.WaitAsync(0).ConfigureAwait(false))
+        {
+            Conversation.NoteSystem("Stop the running turn before signing in.");
+            return;
+        }
+        try
+        {
+            IAcpAgent connection = await EnsureStartedAsync(mcpUrl, cwd).ConfigureAwait(false);
+            if (connection is StreamJsonAgent cli)
+                cli.Login();
+        }
+        catch (Exception ex)
+        {
+            Conversation.NoteSystem($"Could not start sign-in: {ex.Message}");
+        }
+        finally
+        {
+            TurnGate.Release();
+        }
+    }
+
     public void Cancel()
     {
         IAcpAgent? connection;

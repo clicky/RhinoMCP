@@ -877,6 +877,10 @@ export class MockHost implements Bridge {
         this.notice('info', 'AI settings would open as a Rhino options page.');
         return;
 
+      case 'agent.login':
+        this.notice('info', 'The Rhino host would open your browser to sign in to the selected CLI agent.');
+        return;
+
       case 'url.open':
         window.open(command.url, '_blank', 'noopener');
         return;

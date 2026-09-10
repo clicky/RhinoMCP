@@ -6,16 +6,11 @@ using System.Threading.Tasks;
 
 namespace Rhino.AI;
 
-// What the CLI itself says about its login, and how to start a new one.
-//
-// Both CLIs ship a non-interactive status command (`claude auth status --json`, `codex login
-// status`), so the plugin never has to guess a sign-out from error text: it asks. Signing IN,
-// by contrast, cannot happen in the agent's own process (spawned CreateNoWindow with all three
-// streams redirected, while the flow wants a console and a browser), so it gets its own terminal
-// window. RhinoApp-free so it Compile Include's into the tests.
+// CLI-owned authentication: status probes and a separate hidden login process. The login command
+// opens the browser itself; the panel reports completion without exposing a terminal window.
 internal static class CliLogin
 {
-    // Deliberately tri-state: only a CLI that SAYS it is signed out gets a sign-in window. A probe
+    // Deliberately tri-state: only a CLI that SAYS it is signed out starts browser sign-in. A probe
     // that timed out, crashed, or answered in a shape we don't know is Unknown, and Unknown leaves
     // the caller on its ordinary error path rather than sending the user off to sign in for nothing.
     public enum State
@@ -67,61 +62,65 @@ internal static class CliLogin
         }
     }
 
-    // Start the CLI's sign-in in a terminal of its own. Worked-or-not with a reason, because the
-    // caller's fallback (naming the command for the user to run) is a perfectly good outcome.
-    public static bool TryStart(string cliPath, IReadOnlyList<string> loginArguments, out string error)
+    // Keep login separate from the agent process, but hidden. Drain both pipes so CLI output cannot
+    // block completion; do not copy authentication URLs/codes into logs or persisted transcripts.
+    public static async Task SignInAsync(string cliPath, IReadOnlyList<string> loginArguments, CancellationToken cancellationToken)
     {
-        error = string.Empty;
         if (cliPath.Length == 0)
-        {
-            error = "the CLI path is not known yet";
-            return false;
-        }
+            throw new InvalidOperationException("The CLI path is not known yet.");
         if (loginArguments.Count == 0)
-        {
-            error = "this CLI has no sign-in command";
-            return false;
-        }
+            throw new InvalidOperationException("This CLI has no sign-in command.");
 
+        ProcessStartInfo psi = new()
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        CliProcess.ConfigureEncoding(psi);
+        CliProcess.ConfigureFileName(psi, cliPath);
+        foreach (string argument in loginArguments)
+            psi.ArgumentList.Add(argument);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        using Process proc = Process.Start(psi) ?? throw new InvalidOperationException("Could not start sign-in.");
+        // Browser login needs no console input. EOF lets a CLI that requires manual input fail
+        // instead of leaving an invisible prompt waiting forever.
+        proc.StandardInput.Close();
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMinutes(5));
+        Task stdout = proc.StandardOutput.BaseStream.CopyToAsync(System.IO.Stream.Null, timeout.Token);
+        Task stderr = proc.StandardError.BaseStream.CopyToAsync(System.IO.Stream.Null, timeout.Token);
         try
         {
-            Process.Start(StartInfo(cliPath, string.Join(' ', loginArguments)));
-            return true;
+            await proc.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            await Task.WhenAll(stdout, stderr).WaitAsync(timeout.Token).ConfigureAwait(false);
+            if (proc.ExitCode != 0)
+                throw new InvalidOperationException("The browser sign-in did not complete.");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            error = ex.Message;
-            return false;
+            throw new TimeoutException("Sign-in timed out.");
+        }
+        finally
+        {
+            // Disposal alone does not stop a process. Closing a document or timing out must also
+            // release the login callback listener, so the next /login can start cleanly.
+            if (!proc.HasExited)
+            {
+                proc.Kill(entireProcessTree: true);
+                await proc.WaitForExitAsync().ConfigureAwait(false);
+            }
+            try
+            {
+                await Task.WhenAll(stdout, stderr).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // The wait above reports cancellation/timeout; observe cancelled pipe reads too.
+            }
         }
     }
-
-    private static ProcessStartInfo StartInfo(string cliPath, string arguments)
-    {
-        // macOS has no console to allocate, so the window has to come from Terminal.app itself.
-        if (OperatingSystem.IsMacOS())
-        {
-            string command = $"{Quote(cliPath)} {arguments}";
-            ProcessStartInfo psi = new("/usr/bin/osascript");
-            psi.ArgumentList.Add("-e");
-            psi.ArgumentList.Add($"tell application \"Terminal\" to do script \"{Escape(command)}\"");
-            psi.ArgumentList.Add("-e");
-            psi.ArgumentList.Add("tell application \"Terminal\" to activate");
-            return psi;
-        }
-
-        // ShellExecute (not a cmd.exe wrapper) is what gives a console exe its own window, and it
-        // takes the binary as a path rather than a command line, so a spacey install dir and a .cmd
-        // shim both launch without any quoting of our own.
-        return new ProcessStartInfo(cliPath, arguments)
-        {
-            UseShellExecute = true,
-            CreateNoWindow = false,
-        };
-    }
-
-    // POSIX single-quoting for the command that goes inside AppleScript's `do script`...
-    private static string Quote(string path) => $"'{path.Replace("'", "'\\''")}'";
-
-    // ...and then that whole command becomes an AppleScript string literal.
-    private static string Escape(string command) => command.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

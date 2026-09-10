@@ -215,6 +215,7 @@ export type PanelCommand =
   | { type: 'conversation.resume'; sessionId: string }
   | { type: 'conversation.exitReview' }
   | { type: 'agent.select'; name: string }
+  | { type: 'agent.login' }
   | { type: 'question.answer'; items: QuestionAnswer[] }
   | { type: 'question.dismiss'; ids: string[] }
   | { type: 'tool.chip'; callId: string; chipId: string }

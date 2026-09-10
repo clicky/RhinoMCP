@@ -242,6 +242,10 @@ public class AIPanel : Panel
                 SelectAgent(select.Name);
                 break;
 
+            case LoginCommand:
+                Login();
+                break;
+
             case AnswerQuestionCommand answer:
                 Answer(answer.Items);
                 break;
@@ -287,6 +291,27 @@ public class AIPanel : Panel
 
         Resubscribe();
         AgentDispatch.PromptActive(doc, UserMessage.FromText(text.Trim()));
+    }
+
+    private void Login()
+    {
+        if (!TryDoc(out RhinoDoc doc))
+            return;
+        if (!AgentHost.TryFor(doc, out IAgentRunner agent))
+        {
+            Bridge.Post(new NoticeEvent("error", "No AI agent available. Open AI settings to configure one."));
+            return;
+        }
+        if (!AgentDispatch.TryEnsureListener(doc, out int port))
+        {
+            Bridge.Post(new NoticeEvent("error", "Could not start an MCP server for this document."));
+            return;
+        }
+        ExitReview();
+        string cwd = !string.IsNullOrEmpty(doc.Path)
+            ? Path.GetDirectoryName(doc.Path) ?? Path.GetTempPath()
+            : Path.GetTempPath();
+        _ = agent.LoginAsync($"http://localhost:{port}/agent", cwd);
     }
 
     private void NewConversation()

@@ -63,20 +63,9 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     // than re-resolving (and possibly picking a different install).
     private string ExePath { get; set; } = string.Empty;
 
-    // At most one sign-in window per expiry: a user who leaves the terminal sitting there would
-    // otherwise get a fresh one on every prompt. Cleared by a completed turn (proof the login works
-    // again), so a much later second expiry still opens one.
+    // One browser sign-in at a time, cancelled when this agent is disposed.
     private bool LoginLaunched { get; set; }
-
-    // Cancelled on Dispose, so a sign-in watch cannot outlive the agent it belongs to and post into
-    // a conversation the user has already replaced.
     private CancellationTokenSource Lifetime { get; } = new();
-
-    // How the sign-in watch is paced. The window is generous because it spans a browser round trip
-    // the user drives by hand; the interval only really matters for the first minute, since the
-    // watch stops on the first success.
-    private static TimeSpan SignInPollInterval { get; } = TimeSpan.FromSeconds(4);
-    private static TimeSpan SignInWatchWindow { get; } = TimeSpan.FromMinutes(5);
 
     public StreamJsonAgent(AgentDefinition def, IAcpClient client, Conversation conversation, string cwd, IStreamJsonParser parser)
         : this(def, client, conversation, cwd, parser, resumeSessionId: null)
@@ -412,7 +401,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         }
     }
 
-    // Ask the CLI whether the user is signed out, and start the sign-in if so. Returns the line to
+    // Ask the CLI whether the user is signed out, and start browser sign-in if so. Returns the line to
     // show, or "" when this was not a sign-in problem (signed in, or the CLI could not say) - the
     // caller then keeps whatever error it already had.
     private async Task<string> SignedOutNoticeAsync()
@@ -436,56 +425,53 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             Conversation.NoteSystem(note);
     }
 
-    // Open the CLI's sign-in in a terminal and return the line the user reads. A launch that fails
-    // degrades to naming the command, which is all the user needs to finish the job by hand.
+    // Explicit sign-in also works before the first prompt, when no process has resolved ExePath.
+    public void Login()
+    {
+        string path;
+        lock (Gate)
+            path = ExePath;
+        if (path.Length == 0 && !CliProcess.TryResolve(Definition.SearchPaths.GetPaths(), out path))
+        {
+            Conversation.NoteSystem(Parser.NotFoundMessage);
+            return;
+        }
+        Conversation.NoteSystem(StartSignIn(path));
+    }
+
     private string StartSignIn(string path)
     {
-        bool already;
         lock (Gate)
         {
-            already = LoginLaunched;
+            if (LoginLaunched)
+                return $"Sign-in to {Parser.DisplayName} is already in progress. Finish signing in in your browser.";
             LoginLaunched = true;
         }
 
-        // The binary's own name, not DisplayName: a custom agent can be called anything, and this
-        // is a command the user may have to type.
-        string exe = path.Length > 0 ? Path.GetFileNameWithoutExtension(path) : Parser.DisplayName;
-        string command = $"{exe} {string.Join(' ', Parser.LoginArguments)}";
-        if (already)
-            return $"Still signed out of {Parser.DisplayName}. Finish signing in in the terminal window that opened, then send your message again.";
-        if (!CliLogin.TryStart(path, Parser.LoginArguments, out string error))
-            return $"You are signed out of {Parser.DisplayName}. Run '{command}' in a terminal to sign in, then send your message again ({error}).";
-
-        _ = WatchSignInAsync(path);
-        return $"You are signed out of {Parser.DisplayName}, so '{command}' is now running in a terminal window. Sign in there, then send your message again.";
+        _ = Task.Run(() => SignInAsync(path));
+        return $"Opening your browser to sign in to {Parser.DisplayName}…";
     }
 
-    // Say so in the panel the moment the sign-in lands, rather than leaving the user to guess from a
-    // terminal window whether it took. Polled rather than waited on: the login is not reliably our
-    // child process (macOS runs it inside Terminal.app), and the poll stops on the first success, so
-    // the usual sign-in costs a handful of probes.
-    private async Task WatchSignInAsync(string path)
+    private async Task SignInAsync(string path)
     {
-        DateTime deadline = DateTime.UtcNow + SignInWatchWindow;
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            try
-            {
-                await Task.Delay(SignInPollInterval, Lifetime.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-
-            CliLogin.State state = await CliLogin.ProbeAsync(path, Parser.AuthStatusArguments, Parser.ReadAuthState).ConfigureAwait(false);
-            if (state != CliLogin.State.SignedIn)
-                continue;
-
+            await CliLogin.SignInAsync(path, Parser.LoginArguments, Lifetime.Token).ConfigureAwait(false);
+            if (!Lifetime.IsCancellationRequested)
+                Conversation.NoteSystem($"Signed in to {Parser.DisplayName}. You can send your message now.");
+        }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (!Lifetime.IsCancellationRequested)
+                Conversation.NoteSystem($"Could not sign in to {Parser.DisplayName}: {ex.Message} Try /login again.");
+        }
+        finally
+        {
             lock (Gate)
-                LoginLaunched = false; // a later expiry deserves its own window
-            Conversation.NoteSystem($"Signed in to {Parser.DisplayName}. Send your message again.");
-            return;
+                LoginLaunched = false;
         }
     }
 
@@ -521,7 +507,6 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             {
                 turn = CurrentTurn;
                 ResumePending = false; // a turn landed, so the --resume target was accepted
-                LoginLaunched = false; // ...and the login works, so a later expiry may open a window again
                 if (Parser.IsOneTurnPerProcess)
                 {
                     PendingCompletion = new TurnCompletion(reason, usage);
@@ -561,7 +546,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         // Inert when never started: Kill is a no-op while Proc is null (probe-then-dispose in the
         // AgentHost pool must not spawn or tear down anything).
         Kill();
-        Lifetime.Cancel(); // ...and stop any sign-in watch before it posts into a replaced conversation
+        Lifetime.Cancel(); // ...and stop browser sign-in before it posts into a replaced conversation
         TaskCompletionSource<StopReason>? turn;
         lock (Gate)
             turn = CurrentTurn;

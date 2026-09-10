@@ -14,6 +14,9 @@ internal interface IAgentRunner : IDisposable
     /// <summary>Cancels the agent's currently running turn, if any.</summary>
     public void Cancel();
 
+    /// <summary>Opens the CLI sign-in flow.</summary>
+    public Task LoginAsync(string mcpUrl, string cwd);
+
     /// <summary>The live transcript for this agent, fed by its event stream.</summary>
     public Conversation Conversation { get; }
 }

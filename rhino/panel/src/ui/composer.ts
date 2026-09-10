@@ -18,6 +18,7 @@ const COMMANDS: readonly Command[] = [
   { key: 'new', label: '/new', hint: 'Start a fresh conversation', icon: 'plus', run: (c) => c.send({ type: 'conversation.new' }) },
   { key: 'history', label: '/history', hint: 'Browse past conversations', icon: 'history', run: (c) => c.ui.openOverlay('history') },
   { key: 'agent', label: '/agent', hint: 'Switch agent or model', icon: 'agent', run: (c) => c.ui.openOverlay('agents') },
+  { key: 'login', label: '/login', hint: 'Sign in to the selected CLI agent', icon: 'agent', run: (c) => c.send({ type: 'agent.login' }) },
   { key: 'stop', label: '/stop', hint: 'Cancel the running turn', icon: 'stop', run: (c) => c.send({ type: 'cancel' }) },
   { key: 'settings', label: '/settings', hint: 'Open AI settings', icon: 'settings', run: (c) => c.send({ type: 'settings.open' }) },
 ];
