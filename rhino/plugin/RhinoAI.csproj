@@ -72,7 +72,7 @@
     <!-- Link (not copy) the router's on-disk path contract so the plugin and
          router share one definition of the listeners drop dir. Separate
          assemblies, single source file: the consts cannot drift. -->
-    <Compile Include="../router/RouterPaths.cs" Link="RouterPaths.cs" />
+    <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
   </ItemGroup>
 
   <ItemGroup>
