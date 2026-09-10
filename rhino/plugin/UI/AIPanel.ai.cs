@@ -214,7 +214,7 @@ public class AIPanel : Panel
                 break;
 
             case PromptCommand prompt:
-                Send(prompt.Request.Text);
+                Send(prompt.Request);
                 break;
 
             case CancelCommand:
@@ -258,6 +258,10 @@ public class AIPanel : Panel
                 RunToolChip(chip);
                 break;
 
+            case PickAttachmentsCommand:
+                PickAttachments();
+                break;
+
             case OpenSettingsCommand:
                 OpenSettings();
                 break;
@@ -276,9 +280,19 @@ public class AIPanel : Panel
         }
     }
 
-    private void Send(string text)
+    private void Send(PromptRequest request)
     {
-        if (string.IsNullOrWhiteSpace(text) || !TryDoc(out RhinoDoc doc))
+        string text = request.Text.Trim();
+        List<Attachment> attachments = new(request.Attachments.Count);
+        foreach (PanelAttachment sent in request.Attachments)
+        {
+            if (sent.ToAttachment() is { } attachment)
+                attachments.Add(attachment);
+            else
+                Bridge.Post(new NoticeEvent("error", $"Could not attach {sent.Name}."));
+        }
+
+        if ((text.Length == 0 && attachments.Count == 0) || !TryDoc(out RhinoDoc doc))
             return;
 
         // Resolve before dispatch so the Changed hook is attached before the reader loop starts
@@ -290,8 +304,17 @@ public class AIPanel : Panel
         }
 
         Resubscribe();
-        AgentDispatch.PromptActive(doc, UserMessage.FromText(text.Trim()));
+        AgentDispatch.PromptActive(doc, new UserMessage(text, attachments));
     }
+
+    // Deferred so the dialog is not modal inside the webview's own message callback.
+    private void PickAttachments() => Application.Instance.AsyncInvoke(() =>
+    {
+        IReadOnlyList<PanelAttachment> picked =
+            AttachmentPicker.Pick(this, problem => Bridge.Post(new NoticeEvent("error", problem)));
+        if (picked.Count > 0)
+            Bridge.Post(new AttachmentsAddEvent(picked));
+    });
 
     private void Login()
     {
@@ -533,7 +556,7 @@ public class AIPanel : Panel
             RhinoApp.Version.ToString(),
             Environment.OSVersion.Platform == PlatformID.Unix ? "macos" : "windows",
             TryDoc(out RhinoDoc doc) ? DocTitle(doc) : "Untitled",
-            new PanelCapabilities(Attachments: false, ViewportCapture: true, UndoTurn: false, Grasshopper: true))));
+            new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true))));
 
         // Forced: this runs on the panel's `ready`, so the page is new and has nothing yet.
         SendTheme(force: true);

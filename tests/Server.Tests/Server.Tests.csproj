@@ -49,7 +49,11 @@
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/Agents/Attachment.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelAttachment.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelCommands.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/WebPanel/PanelEvents.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelJson.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/WebPanel/ToolChips.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.ai.cs" LinkBase="PanelSources" />
   </ItemGroup>

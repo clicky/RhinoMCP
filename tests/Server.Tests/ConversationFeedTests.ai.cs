@@ -96,6 +96,69 @@ public class ConversationFeedTests
         Assert.That(StatusOf(emitted, "c1"), Is.EqualTo("ok"));
     }
 
+    [Test]
+    public void A_sent_turn_names_the_files_that_went_with_it()
+    {
+        List<PanelEvent> emitted = [];
+        Conversation convo = new(Guid.NewGuid(), "claude", "doc.3dm");
+        ConversationFeed feed = new(convo, emitted.Add);
+
+        convo.BeginTurn(string.Empty, [new AttachmentInfo(AttachmentKind.Image, "plan.png", "image/png", 68)]);
+        feed.Pump();
+
+        PanelTurn begun = emitted.OfType<TurnBeginEvent>().Single().Turn;
+        Assert.That(begun.Attachments, Has.Count.EqualTo(1));
+        Assert.That(begun.Attachments[0].Name, Is.EqualTo("plan.png"));
+        Assert.That(begun.Attachments[0].Kind, Is.EqualTo("image"));
+        Assert.That(begun.Attachments[0].Bytes, Is.EqualTo(68));
+        Assert.That(begun.Attachments[0].DataUrl, Is.Null);
+    }
+
+    [Test]
+    public void A_reloaded_conversation_still_names_them()
+    {
+        DateTimeOffset at = DateTimeOffset.UnixEpoch;
+        AttachmentInfo image = new(AttachmentKind.Image, "plan.png", "image/png", 68);
+        ConversationDto dto = new("2f8b1c40-5d3e-4a91-9c62-7f0a8e14d5b3", "claude", "doc.3dm", at, [],
+            [new TurnDto("what is this", at, at, [], default, [image])]);
+
+        List<PanelEvent> emitted = [];
+        ConversationFeed feed = new(Conversation.Restore(dto), emitted.Add);
+        feed.Replay(readOnly: true);
+
+        PanelTurn begun = emitted.OfType<TurnBeginEvent>().Single().Turn;
+        Assert.That(begun.Attachments.Select(static a => a.Name), Is.EqualTo(new[] { "plan.png" }));
+    }
+
+    [Test]
+    public void An_attachment_survives_the_trip_through_the_saved_transcript()
+    {
+        DateTimeOffset at = DateTimeOffset.UnixEpoch;
+        AttachmentInfo image = new(AttachmentKind.Image, "plan.png", "image/png", 68);
+        ConversationDto saved = new("2f8b1c40-5d3e-4a91-9c62-7f0a8e14d5b3", "claude", "doc.3dm", at, [],
+            [new TurnDto("what is this", at, at, [], default, [image])]);
+
+        string json = JsonSerializer.Serialize(saved, McpSerializer.Options);
+        ConversationDto? reloaded = JsonSerializer.Deserialize<ConversationDto>(json, McpSerializer.Options);
+
+        Assert.That(reloaded, Is.Not.Null);
+        Assert.That(reloaded!.Turns[0].Attachments, Is.EqualTo(new[] { image }));
+    }
+
+    [Test]
+    public void A_transcript_saved_before_attachments_existed_reloads_with_none()
+    {
+        DateTimeOffset at = DateTimeOffset.UnixEpoch;
+        ConversationDto dto = new("2f8b1c40-5d3e-4a91-9c62-7f0a8e14d5b3", "claude", "doc.3dm", at, [],
+            [new TurnDto("go", at, at, [])]);
+
+        List<PanelEvent> emitted = [];
+        ConversationFeed feed = new(Conversation.Restore(dto), emitted.Add);
+        feed.Replay(readOnly: true);
+
+        Assert.That(emitted.OfType<TurnBeginEvent>().Single().Turn.Attachments, Is.Empty);
+    }
+
     private static string? StatusOf(IReadOnlyList<PanelEvent> emitted, string callId)
     {
         string? status = null;

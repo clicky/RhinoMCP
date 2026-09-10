@@ -32,14 +32,16 @@ internal sealed class Turn
     private object Sync { get; }
     private List<TurnEvent> EventList { get; } = new();
 
-    internal Turn(string prompt, object sync)
+    internal Turn(string prompt, IReadOnlyList<AttachmentInfo> attachments, object sync)
     {
         Prompt = prompt;
+        Attachments = attachments;
         StartedAt = DateTimeOffset.UtcNow;
         Sync = sync;
     }
 
     public string Prompt { get; }
+    public IReadOnlyList<AttachmentInfo> Attachments { get; }
     public DateTimeOffset StartedAt { get; }
     public DateTimeOffset? CompletedAt { get; private set; }
     public bool Completed { get { lock (Sync) return CompletedAt.HasValue; } }
@@ -121,7 +123,7 @@ internal sealed class Conversation
 
         foreach (TurnDto turnDto in dto.Turns)
         {
-            Turn turn = new(turnDto.Prompt, convo.Sync);
+            Turn turn = new(turnDto.Prompt, turnDto.Attachments ?? [], convo.Sync);
             foreach (TurnEventDto ev in turnDto.Events)
                 // Transcripts saved before Done existed carry it as false, so fall back to the old inference.
                 turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
@@ -150,12 +152,12 @@ internal sealed class Conversation
     public IReadOnlyList<Turn> Turns { get { lock (Sync) return TurnList.ToArray(); } }
     public IReadOnlyList<TurnEvent> Lifecycle { get { lock (Sync) return LifecycleList.ToArray(); } }
 
-    public Turn BeginTurn(string prompt)
+    public Turn BeginTurn(string prompt, IReadOnlyList<AttachmentInfo>? attachments = null)
     {
         Turn turn;
         lock (Sync)
         {
-            turn = new(prompt, Sync);
+            turn = new(prompt, attachments ?? [], Sync);
             TurnList.Add(turn);
             Current = turn;
         }

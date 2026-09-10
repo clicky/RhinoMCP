@@ -69,6 +69,11 @@ function start(): void {
       window.location.reload();
       return;
     }
+    // The composer is panel-local state, so a host-picked file joins it the same way a dropped one does.
+    if (event.type === 'attachments.add') {
+      for (const attachment of event.attachments) ui.addAttachment(attachment);
+      return;
+    }
     store.apply(event);
   });
   mount(host, () => app(ctx));

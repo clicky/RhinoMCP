@@ -53,7 +53,7 @@ internal sealed class AgentRunner : IAgentRunner
         try
         {
             IAcpAgent connection = await EnsureStartedAsync(mcpUrl, cwd).ConfigureAwait(false);
-            Conversation.BeginTurn(message.Text);
+            Conversation.BeginTurn(message.Text, [.. message.Attachments.Select(static a => a.Info)]);
             await connection.SessionPromptAsync(new PromptRequest
             {
                 SessionId = SessionId,

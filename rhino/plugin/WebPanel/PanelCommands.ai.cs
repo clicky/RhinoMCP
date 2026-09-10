@@ -21,6 +21,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(AnswerQuestionCommand), "question.answer")]
 [JsonDerivedType(typeof(DismissQuestionCommand), "question.dismiss")]
 [JsonDerivedType(typeof(ToolChipCommand), "tool.chip")]
+[JsonDerivedType(typeof(PickAttachmentsCommand), "attachments.pick")]
 [JsonDerivedType(typeof(OpenSettingsCommand), "settings.open")]
 [JsonDerivedType(typeof(OpenUrlCommand), "url.open")]
 [JsonDerivedType(typeof(ClipboardCommand), "clipboard.write")]
@@ -41,6 +42,7 @@ internal sealed record LoginCommand : PanelCommand;
 internal sealed record AnswerQuestionCommand(IReadOnlyList<QuestionAnswer> Items) : PanelCommand;
 internal sealed record DismissQuestionCommand(IReadOnlyList<string> Ids) : PanelCommand;
 internal sealed record ToolChipCommand(string CallId, string ChipId) : PanelCommand;
+internal sealed record PickAttachmentsCommand : PanelCommand;
 internal sealed record OpenSettingsCommand : PanelCommand;
 internal sealed record OpenUrlCommand(string Url) : PanelCommand;
 internal sealed record ClipboardCommand(string Text) : PanelCommand;
@@ -58,4 +60,4 @@ internal sealed record OpenMenuCommand(
 
 internal sealed record QuestionAnswer(string Id, IReadOnlyList<string> Answers);
 
-internal sealed record PromptRequest(string Text);
+internal sealed record PromptRequest(string Text, IReadOnlyList<PanelAttachment> Attachments);

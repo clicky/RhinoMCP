@@ -19,7 +19,8 @@ internal sealed record TurnDto(
     DateTimeOffset StartedAt,
     DateTimeOffset? CompletedAt,
     IReadOnlyList<TurnEventDto> Events,
-    TokenUsage Usage = default);
+    TokenUsage Usage = default,
+    IReadOnlyList<AttachmentInfo>? Attachments = null);
 
 internal sealed record ConversationDto(
     string SessionId,

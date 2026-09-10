@@ -24,6 +24,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(TurnEndEvent), "turn.end")]
 [JsonDerivedType(typeof(QuestionEvent), "question")]
 [JsonDerivedType(typeof(QuestionClearEvent), "question.clear")]
+[JsonDerivedType(typeof(AttachmentsAddEvent), "attachments.add")]
 [JsonDerivedType(typeof(NoticeEvent), "notice")]
 [JsonDerivedType(typeof(StatusEvent), "status")]
 [JsonDerivedType(typeof(ZoomEvent), "zoom")]
@@ -44,6 +45,7 @@ internal sealed record TurnUsageEvent(string TurnId, PanelUsage Usage) : PanelEv
 internal sealed record TurnEndEvent(string TurnId, string Status, string? Error) : PanelEvent;
 internal sealed record QuestionEvent(PanelQuestion Question) : PanelEvent;
 internal sealed record QuestionClearEvent(string Id) : PanelEvent;
+internal sealed record AttachmentsAddEvent(IReadOnlyList<PanelAttachment> Attachments) : PanelEvent;
 internal sealed record NoticeEvent(string Level, string Text) : PanelEvent;
 internal sealed record StatusEvent(string? Text) : PanelEvent;
 
@@ -106,12 +108,11 @@ internal sealed record PanelToolPatch(
     int? DurationMs,
     IReadOnlyList<PanelToolChip> Chips);
 
-// Blocks arrive as their own events, so a turn always begins empty. Attachments/Context/Plan are
-// declared because the panel's contract requires them, and are the obvious seams to fill next.
+// Blocks arrive as their own events, so a turn always begins empty. Context/Plan are the seams left to fill.
 internal sealed record PanelTurn(
     string Id,
     string Prompt,
-    IReadOnlyList<object> Attachments,
+    IReadOnlyList<PanelAttachment> Attachments,
     IReadOnlyList<object> Context,
     string StartedAt,
     string Status,

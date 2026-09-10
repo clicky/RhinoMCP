@@ -93,7 +93,7 @@ internal sealed class ConversationFeed
                 Emit(new TurnBeginEvent(new PanelTurn(
                     started.Id,
                     turns[i].Prompt,
-                    Array.Empty<object>(),
+                    Describe(started.Id, turns[i].Attachments),
                     Array.Empty<object>(),
                     turns[i].StartedAt.ToString("O"),
                     Status: "running",
@@ -107,6 +107,14 @@ internal sealed class ConversationFeed
         }
 
         PumpQuestion();
+    }
+
+    private static IReadOnlyList<PanelAttachment> Describe(string turnId, IReadOnlyList<AttachmentInfo> attachments)
+    {
+        List<PanelAttachment> described = new(attachments.Count);
+        for (int i = 0; i < attachments.Count; i++)
+            described.Add(PanelAttachment.Describe($"{turnId}-a{i}", attachments[i]));
+        return described;
     }
 
     private void PumpTurn(TurnCursor cursor, Turn turn)

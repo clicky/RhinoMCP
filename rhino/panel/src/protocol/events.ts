@@ -39,7 +39,7 @@ export interface Attachment {
   name: string;
   mediaType: string;
   bytes: number;
-  /** Images only, for the composer thumbnail and the sent-message preview. */
+  /** The file's bytes, base64 in a data URL: what the host sends to the agent, and what an image thumbnail draws. */
   dataUrl?: string;
 }
 
@@ -186,6 +186,7 @@ export type HostEvent =
   | { type: 'turn.end'; turnId: string; status: TurnStatus; error?: string }
   | { type: 'question'; question: PendingQuestion }
   | { type: 'question.clear'; id: string }
+  | { type: 'attachments.add'; attachments: Attachment[] }
   | { type: 'notice'; level: NoticeLevel; text: string }
   | { type: 'status'; text: string | null }
   // The host owns the right-click menu, but the panel owns the zoom ladder, so the menu sends back

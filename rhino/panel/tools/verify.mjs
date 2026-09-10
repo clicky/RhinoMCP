@@ -851,6 +851,52 @@ try {
       && answered.items[1].answers[0] === "I don't know"
       && answered.items.every((i) => typeof i.id === 'string'), JSON.stringify(answered));
 
+    // ------------- the paper clip: a WKWebView has no open panel, so the host picks and answers with attachments.add
+    await host.evaluate(() => {
+      window.__sent.length = 0;
+      document.querySelector('.composer-actions button[title="Attach a file"]').click();
+    });
+    await wait(120);
+    check('the paper clip asks the host to open a file dialog',
+      await host.evaluate(() => window.__sent.some((m) => m.type === 'attachments.pick')),
+      await host.evaluate(() => JSON.stringify(window.__sent.map((m) => m.type))));
+
+    const picked = {
+      id: 'host-1',
+      kind: 'image',
+      name: 'plan.png',
+      mediaType: 'image/png',
+      bytes: 68,
+      dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+    };
+    await host.evaluate((attachment) => {
+      window.__sent.length = 0;
+      window.rhinoAI.receive({ type: 'attachments.add', attachments: [attachment] });
+    }, picked);
+    await wait(200);
+    const tile = await host.evaluate(() => ({
+      tiles: document.querySelectorAll('.composer .attach').length,
+      thumbnails: document.querySelectorAll('.composer .attach img').length,
+      name: document.querySelector('.composer .attach .meta b')?.textContent,
+    }));
+    check('a file the host picked lands in the composer with its thumbnail',
+      tile.tiles === 1 && tile.thumbnails === 1 && tile.name === 'plan.png', JSON.stringify(tile));
+
+    await host.evaluate(() => {
+      const field = document.querySelector('.composer textarea');
+      field.value = 'what is this';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    });
+    await wait(200);
+    const sentPrompt = await host.evaluate(() => window.__sent.find((m) => m.type === 'prompt'));
+    check('the prompt carries the attachment bytes the host has to decode',
+      sentPrompt?.request?.attachments?.length === 1
+      && sentPrompt.request.attachments[0].dataUrl === picked.dataUrl
+      && sentPrompt.request.attachments[0].kind === 'image', JSON.stringify(sentPrompt?.request?.attachments));
+    check('a sent prompt clears the composer of its attachments',
+      (await host.evaluate(() => document.querySelectorAll('.composer .attach').length)) === 0);
+
     // ------------------------------------------------- resume, the way Rhino replays it
     // ConversationFeed.Replay posts an empty snapshot and then the turns one event at a time, each
     // its own ExecuteScriptAsync, and every agent message renders its markdown a frame later. So

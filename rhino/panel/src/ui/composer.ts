@@ -2,6 +2,7 @@ import { bind, each, el, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { computed, signal } from '../core/signal.js';
 import { formatBytes } from '../state/format.js';
+import { isAttachable, MAX_ATTACHMENT_BYTES, readAttachments } from '../protocol/attachments.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
@@ -33,32 +34,20 @@ const CONTEXT_ICON: Record<ContextItem['kind'], IconName> = {
   file: 'document',
 };
 
-async function readDropped(files: readonly File[]): Promise<Attachment[]> {
-  const read = files.map(
-    (file, index) =>
-      new Promise<Attachment>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(reader.error);
-        reader.onload = () =>
-          resolve({
-            id: `local-${Date.now()}-${index}`,
-            kind: file.type.startsWith('image/') ? 'image' : 'text',
-            name: file.name,
-            mediaType: file.type || 'application/octet-stream',
-            bytes: file.size,
-            ...(file.type.startsWith('image/') ? { dataUrl: String(reader.result) } : {}),
-          });
-        if (file.type.startsWith('image/')) reader.readAsDataURL(file);
-        else reader.readAsText(file);
-      }),
-  );
-  return Promise.all(read);
-}
-
 export function composer(ctx: PanelContext): Child {
   const { store, ui } = ctx;
   const dropping = signal(false);
   const highlighted = signal(0);
+
+  const attach = (files: readonly File[]): void => {
+    for (const file of files.filter((candidate) => !isAttachable(candidate)))
+      store.apply({
+        type: 'notice',
+        level: 'error',
+        text: `${file.name} is ${formatBytes(file.size)}, over the ${formatBytes(MAX_ATTACHMENT_BYTES)} attachment limit.`,
+      });
+    void readAttachments(files.filter(isAttachable)).then((list) => list.forEach((a) => ui.addAttachment(a)));
+  };
 
   let input!: HTMLTextAreaElement;
 
@@ -183,14 +172,14 @@ export function composer(ctx: PanelContext): Child {
       .filter((file): file is File => file !== null);
     if (files.length === 0) return;
     event.preventDefault();
-    void readDropped(files).then((attachments) => attachments.forEach((a) => ui.addAttachment(a)));
+    attach(files);
   };
 
   const attachmentTile = (attachment: Attachment): Child =>
     el(
       'div',
       { class: 'attach' },
-      attachment.dataUrl
+      attachment.kind === 'image' && attachment.dataUrl
         ? el('img', { src: attachment.dataUrl, alt: attachment.name })
         : el('span', { class: 'glyph' }, icon('document', 14)),
       el(
@@ -268,8 +257,7 @@ export function composer(ctx: PanelContext): Child {
         event.preventDefault();
         dropping.set(false);
         const files = [...(event.dataTransfer?.files ?? [])];
-        if (files.length > 0)
-          void readDropped(files).then((attachments) => attachments.forEach((a) => ui.addAttachment(a)));
+        if (files.length > 0) attach(files);
       },
     },
     menu,

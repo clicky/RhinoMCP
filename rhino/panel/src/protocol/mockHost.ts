@@ -14,6 +14,7 @@ import type {
   ToolPatch,
   TokenUsage,
 } from './events.js';
+import { isAttachable, MAX_ATTACHMENT_BYTES, readAttachments } from './attachments.js';
 import { viewportCapture } from './viewport.js';
 
 const ABORTED = Symbol('aborted');
@@ -872,7 +873,7 @@ export class MockHost implements Bridge {
         return;
 
       case 'attachments.pick':
-        this.notice('info', 'The host would open a file dialog here. Drag a file onto the composer instead.');
+        this.pickFiles();
         return;
 
       case 'settings.open':
@@ -906,6 +907,23 @@ export class MockHost implements Bridge {
 
   notice(level: 'info' | 'warn' | 'error', text: string): void {
     this.emit({ type: 'notice', level, text });
+  }
+
+  // Rhino opens an Eto dialog and posts the files back; a browser has a file input, and the event it answers with is the same.
+  private pickFiles(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.addEventListener('change', () => {
+      const files = [...(input.files ?? [])];
+      const tooBig = files.filter((file) => !isAttachable(file));
+      for (const file of tooBig)
+        this.notice('error', `${file.name} is over the ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB attachment limit.`);
+      void readAttachments(files.filter(isAttachable)).then((attachments) => {
+        if (attachments.length > 0) this.emit({ type: 'attachments.add', attachments });
+      });
+    });
+    input.click();
   }
 
   /** Word-at-a-time streaming, roughly the cadence a CLI agent produces. */
