@@ -6,6 +6,15 @@ namespace Rhino.AI.Resources;
 
 internal static class GH1_Utils
 {
+  public static IEnumerable<IGH_Param> WireSources(GH_Document doc, IGH_Param input)
+  {
+    foreach (IGH_Param source in input.Sources)
+    {
+      IGH_Param? resolved = doc.FindParameter(source.InstanceGuid);
+      if (resolved is not null)
+        yield return resolved;
+    }
+  }
 
   public static bool TryGetOrCreateDoc(RhinoDoc rhDoc, out GH_Document doc)
   {

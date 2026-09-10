@@ -66,7 +66,7 @@ internal static class GH1_GetCanvasGraphTool
             else if (obj is IGH_Param param)
             {
                 // For a standalone param (e.g. slider), expose its own data as a single output.
-                inputs = Array.Empty<InputInfo>();
+                inputs = new[] { MakeInput(param, include_data, sample_size, wires, obj.InstanceGuid) };
                 outputs = new[] { MakeOutput(param, include_data, sample_size, displaySummarySource: obj) };
             }
             else

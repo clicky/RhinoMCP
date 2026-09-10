@@ -24,11 +24,11 @@ internal static class Grasshopper2
             if (obj is global::Grasshopper2.Components.Component comp)
             {
                 foreach (global::Grasshopper2.Parameters.IParameter input in comp.Parameters.Inputs)
-                    wires += input.Inputs.Count;
+                    wires += GH2_Utils.WireSources(ghDoc, input).Count();
             }
             else if (obj is global::Grasshopper2.Parameters.IParameter param)
             {
-                wires += param.Inputs.Count;
+                wires += GH2_Utils.WireSources(ghDoc, param).Count();
             }
         }
 

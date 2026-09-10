@@ -12,6 +12,15 @@ namespace Rhino.AI.Resources;
 
 internal static class GH2_Utils
 {
+  public static IEnumerable<IParameter> WireSources(Document doc, IParameter input)
+  {
+    foreach (var sourceId in input.Inputs.Forwards)
+    {
+      IParameter? source = doc.Objects.FindParameter(sourceId);
+      if (source is not null)
+        yield return source;
+    }
+  }
 
   public static bool TryGetDoc(RhinoDoc rhDoc, out Document doc)
   {

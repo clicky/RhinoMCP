@@ -112,11 +112,8 @@ internal static class GH2_GetCanvasGraphTool
     private static InputInfo MakeInput(Document doc, IParameter param, bool includeData, int sampleSize, List<Wire> wires, Guid ownerId)
     {
         var sources = new List<Endpoint>();
-        foreach (var srcId in param.Inputs.Forwards)
+        foreach (var srcParam in GH2_Utils.WireSources(doc, param))
         {
-            var srcParam = doc.Objects.FindParameter(srcId);
-            if (srcParam is null) continue;
-
             // Resolve to the founding object so that the wire endpoint maps to a
             // top-level canvas object rather than to a nested input parameter.
             var top = srcParam.FoundingObject ?? srcParam;
