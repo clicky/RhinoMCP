@@ -14,7 +14,7 @@ internal sealed class PendingQuestion
         // Collapse agent-supplied duplicates of what the panel synthesizes for every question.
         List<string> kept = [];
         foreach (string option in options)
-            if (!IsPanelSynthesized(option))
+            if (!string.IsNullOrWhiteSpace(option) && !IsPanelSynthesized(option))
                 kept.Add(option);
         Options = kept;
         Mode = mode;

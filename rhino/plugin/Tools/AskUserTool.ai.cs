@@ -12,35 +12,16 @@ internal static class AskUserTool
         + "make yourself. Pass EVERY question you need answered in this one call: the Rhino AI panel "
         + "shows them one page at a time (radio for single choice, checkboxes for multi) and returns "
         + "them as a single reply. This tool does NOT wait for the answers: it poses the questions "
-        + "and returns immediately. STOP and end your turn after calling it; the user's answers "
+        + "and returns immediately. Only on success, STOP and end your turn; on failure, fix the input and retry; the user's answers "
         + "arrive as their next message, then continue.")]
     public static async Task<IToolResult> AskUser(
         RhinoDoc doc,
         [Description("The questions to ask, in the order they should be shown")] QuestionSpec[] questions)
     {
-        List<PendingQuestion> posed = [];
-        foreach (QuestionSpec spec in questions ?? [])
-        {
-            if (spec is null || string.IsNullOrWhiteSpace(spec.Question))
-                continue;
-
-            PendingQuestion pending = new(
-                spec.Question,
-                spec.Options ?? [],
-                spec.MultiSelect ? AskUserMode.Multi : AskUserMode.Single);
-
-            // The constructor collapses labels the panel synthesizes, so an options list of only
-            // those survives a raw length check yet leaves nothing to pick. Drop such a question
-            // rather than render a dead card.
-            if (pending.Options.Count > 0)
-                posed.Add(pending);
-        }
-
-        if (posed.Count == 0)
-            return Failure(
-                ToolError.BadArgument,
-                "ask_user needs a non-empty questions array",
-                "Each entry is { question, options, multiSelect? } and must carry at least one real option.");
+        Coercions coercions = new();
+        IToolResult? failure = AskUserValidation.Validate(questions, coercions, out List<PendingQuestion> posed);
+        if (failure is not null)
+            return failure;
 
         // Attach to the live Conversation so the panel renders the cards; the Conversation is the
         // single source of truth for pending questions (it survives a panel dock/undock reload,
@@ -50,15 +31,16 @@ internal static class AskUserTool
         // can't race a New/SetActive mutation.
         ConversationLookup lookup = await ResolveConversationAsync(doc).ConfigureAwait(false);
 
+        if (!lookup.Attached)
+            return Failure(ToolError.Failed, "No active conversation is available to show the questions.",
+                "Do not wait for answers: no questions were shown. Retry from an active Rhino AI panel conversation.");
+
         // A second ask_user APPENDS rather than replacing, so an earlier unanswered question is never
         // silently evicted, and the printed prompt below reports the whole outstanding set.
         IReadOnlyList<PendingQuestion> outstanding = posed;
-        if (lookup.Attached)
-        {
-            lookup.Conversation.AddPendingQuestions(posed);
-            if (lookup.Conversation.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> all))
-                outstanding = all;
-        }
+        lookup.Conversation.AddPendingQuestions(posed);
+        if (lookup.Conversation.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> all))
+            outstanding = all;
 
         PrintPrompt(outstanding);
 
@@ -70,7 +52,7 @@ internal static class AskUserTool
             outstanding = outstanding.Count,
             note = "Shown to the user in the Rhino panel. Stop now and end your turn; "
                 + "the user's answers will be your next message, then continue.",
-        });
+        }, coercions.Guidance);
     }
 
     private readonly record struct ConversationLookup(bool Attached, Conversation Conversation);

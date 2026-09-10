@@ -6,5 +6,5 @@ namespace Rhino.AI.Tools;
 // constructor, so these descriptions are what the agent actually reads.
 internal sealed record QuestionSpec(
     [Description("The question to show the user")] string Question,
-    [Description("The options to choose from")] string[] Options,
+    [Description("At least one non-blank choice is required. Do not include Other or I don't know; the panel adds those automatically.")] string[] Options,
     [Description("true = the user may pick several of these options (checkboxes); false = one choice (radio). Default false.")] bool MultiSelect = false);

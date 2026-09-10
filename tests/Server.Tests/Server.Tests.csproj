@@ -49,6 +49,9 @@
     <!-- ask_user's question item: the schema generated from it is what the agent reads, so assert
          the real record rather than a lookalike. -->
     <Compile Include="../../rhino/plugin/Tools/QuestionSpec.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Tools/AskUserValidation.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Tools/Coercions.cs" LinkBase="PluginSources" />
   </ItemGroup>
 
 </Project>
