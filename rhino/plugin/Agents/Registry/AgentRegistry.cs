@@ -51,9 +51,9 @@ internal class AgentRegistry
                 BuiltInDefinitions.AddRange(definitions. Definitions);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // TODO : Log
+            RhinoApp.WriteLine($"Failed to load Agent Definitions {ex.Message}");
         }
     }
 
